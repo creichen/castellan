@@ -1,0 +1,38 @@
+* Main Tasks
+** Task manager
+*** DONE collect TODO items and show in agenda-like buffer
+*** DONE quick keybinds
+*** DONE go back to correct position after update
+*** DONE tests
+*** TODO move items
+*** TODO scheduled-for, plus key bindings to alter
+*** TODO sorting, and factoring in the current activity
+*** TODO refiling (including to possibly-empty nodes that we might not be displaying)
+*** TODO apply actions to multiple items in selection
+  (if (use-region-p)
+      (save-excursion  ; Preserve the original point
+        (let ((end (region-end)))
+          (goto-char (region-beginning))
+          (while (< (point) end)
+            (command-logic)  ; Replace with the actual logic of your command
+            (forward-line 1))))
+    (command-logic)))  ; Apply to the current line if no selection
+*** TODO similar ones for (todo "WAIT") and (todo "DELEGATED")
+*** TODO new items (into inbox)
+*** TODO duration
+** Week schedule view + live construction (update live as spec buffers upate)
+*** TODO collect calendar info
+*** TODO draw calendar info
+*** TODO auto-updating when buffers update
+*** TODO auto-updating over time
+*** TODO jump-to-location
+** Task/deadline list separate from the week schedule
+*** TODO adapt existing agenda view appropriatley
+** Activity overview
+*** TODO collect activity stats
+*** TODO visualise activity stats in buffer
+*** TODO jump-to-location
+** TODO combo view: schedule + tasks + activities
+** Quick task creation, completion, delegatoin, start, stop
+** Task effort estimates, activity blocks, general blocks, and auto-schedule
+** Effort stats

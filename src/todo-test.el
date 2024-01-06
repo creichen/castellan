@@ -177,5 +177,42 @@ otherwise all buffers are parsed again."
 	    '((A (foo (TODO bar) (TODO alphabeta)))
 	      (B (quux)))
 	    (harness-parsed-buffers)))
-   ))
+   )
 
+(ert-deftest test-parse-weekspec ()
+  "Validate week and weekday parsing"
+  (let (calendar-week-start-day 1)
+    (should (equal '(nil nil 7 0)
+		   (castellan-todo--parse-week "#Sun")))
+    (should (equal '(nil 33 nil nil)
+		   (castellan-todo--parse-week "#W33")))
+    (should (equal '(1978 nil nil nil)
+		   (castellan-todo--parse-week "#Y1978")))
+    (should (equal '(1978 nil 1 1)
+		   (castellan-todo--parse-week "#Y1978" '(nil nil 1 1))))
+    (should (equal '(1978 2 nil nil)
+		   (castellan-todo--parse-week "#Y1978" '(nil 2 nil nil))))
+    (should (equal '(2000 nil 2 2)
+		   (castellan-todo--parse-week "#Tue" '(2000 nil nil nil))))
+  ))
+
+(ert-deftest test-weekspec-to-datetime ()
+  "Validate weekspec to datetime conversion"
+  (should (equal '(nil nil nil 19 1 2000 3 nil nil)
+		 (castellan--weekspec-to-datetime '(2000 3 3 3))))
+  ;; corner case:
+  (should (equal '(nil nil nil 1 1 2023 0 nil nil)
+		 (castellan--weekspec-to-datetime '(2022 52 7 0)))))
+
+
+(ert-deftest test-weekspec-format ()
+  "Weekspec stringification"
+  (let castellan-time-locale "C"
+       (should (equal "2000 W03: Wed"
+		      (castellan--weekspec-format '(2000 3 3 3))))
+       (should (equal "2022 W52: Sun"
+		      (castellan--weekspec-format '(2022 52 7 0))))
+       (should (equal "2022 W52"
+		      (castellan--weekspec-format '(2022 52 nil nil))))
+       (should (equal "2023 52"
+		      (castellan--weekspec-format '(2022 52 7 0) "%Y %V")))))

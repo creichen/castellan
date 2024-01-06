@@ -1,12 +1,35 @@
 * Main Tasks
-** Task manager
+** Task manager A
 *** DONE collect TODO items and show in agenda-like buffer
 *** DONE quick keybinds
 *** DONE go back to correct position after update
 *** DONE tests
-*** TODO move items
-*** TODO scheduled-for, plus key bindings to alter
+*** DONE display scheduled-for info (+25m) (already extracted as :scheduled; see notes below)
+org-time-string-to-time: This function takes an Org-mode time string (like those used in "SCHEDULED" or "DEADLINE" properties) and converts it into the Emacs time format.
+
+format-time-string: Once you have a time in Emacs time format, you can use this function to convert it into a custom string format.
+
+Arithmetic on Times: For performing arithmetic on times, you can use functions like time-add, time-subtract, and seconds-to-time.
+
+org-time-string-to-seconds:
+
+(SEC MIN HOUR DAY MON YEAR DOW DST TZ)
+*** DONE activity from "agenda-group" property
+*** DONE temporary: inherit week number and weekday info (+30m)
+- format: #W42, #Tue
+*** DONE separate buffer for only scheduled-for items, sorted by time and date, with week tags / weekday tags (+45m)
+*** DONE integrate calendar itemss, but only future ones
+*** DONE fix: changing TODO status stays in the right buffer
+*** DONE command to pop up both buffers, maintaining state
+*** TODO Allow setting current activity and prioritise tasks by that activity (+20m)
+*** TODO schedule: by week, day, or time.  Support notation like "W+1" and "Tue"; also allow unscheduling (+30m)
+*** TODO key to show path for current item (since not always visible in timeline view) (+5m)
+** Task manager B
+*** TODO new items (into INBOX or at point, for task buffer)
+*** TODO new items (at week/date and into INBOX, for date buffer)
+** Task manager C
 *** TODO sorting, and factoring in the current activity
+*** TODO move items
 *** TODO refiling (including to possibly-empty nodes that we might not be displaying)
 *** TODO apply actions to multiple items in selection
   (if (use-region-p)
@@ -17,8 +40,7 @@
             (command-logic)  ; Replace with the actual logic of your command
             (forward-line 1))))
     (command-logic)))  ; Apply to the current line if no selection
-*** TODO similar ones for (todo "WAIT") and (todo "DELEGATED")
-*** TODO new items (into inbox)
+*** TODO todo "WAIT" and todo "DELEGATED" with names attached
 *** TODO duration
 ** Week schedule view + live construction (update live as spec buffers upate)
 *** TODO collect calendar info

@@ -85,6 +85,25 @@
     t
     :action #'castellan--org-ql-action))
 
+(defun castellan--calendar-item-on-or-after (today item &optional selector)
+  (unless selector
+    (setq :scheduled selector))
+  (-let [(_ (&plist :year-start year-start
+		    :month-start month-start
+		    :day-start day-start
+		    :year-end year-end
+		    :month-end month-end
+		    :day-end day-end))
+	 (plist-get (plist-get item :headline-props) selector)]
+    (let* ((start (list 0 0 0 day-start month-start year-start nil nil nil))
+	   (end   (list 0 0 0 day-end   month-end   year-end   nil nil nil)))
+      (and (datetime-has-date start)
+	   ;; hasn't started yet or is starting just today?
+	   (or (datetime<= today start)
+	       ;; or hasn't ended yet?
+	       (and (datetime-has-date end)
+		    (datetime<= today end)))))))
+
 (defun castellan--get-all-calendar-items (&optional today)
   (unless today
     (setq today (datetime-org-today)))
@@ -819,11 +838,8 @@ If there is no such item, moves to the end of the buffer."
   (let ((found nil))
     (while (and (not found) (not (eobp)))  ; While not found and not at end of buffer
       (let ((item (castellan-todo--info-at-point 'ITEM)))
-	(message "Considering %s" item)
 	(when item
 	  (-let [(&plist :todo-type todo-type :repeater repeater) item]
-	    (message "  -- repeater is %s" repeater)
-	    (message "  -- todo-type is %s" todo-type)
 	    (when (and (not repeater)
 		     (string= todo-type "todo"))
 	      (setq found t)))))
@@ -837,3 +853,5 @@ If there is no such item, moves to the end of the buffer."
   (pop-to-buffer (castellan-todo--refresh))
   (pop-to-buffer (castellan-todo--schedule-refresh))
   (castellan-todo-find-first))
+
+(provide 'castellan-todo)

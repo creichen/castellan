@@ -30,18 +30,13 @@
 
 ;; Requires `dash' and `compat-29'.
 
-;; Terminology:
-;; - tags: all the things managed by mu4e-tagging-mode, comprising
-;;   - flags: toggles that are independent of each other
-;;   - categories: selections that are mutually exclusive.
-;;
-;; Mails may violate the "categories" restriction and/or include
-;; unknown tags; we handle these cases gracefully.
-;;
-;; - A mail is:
-;;   - cagetorised ("categorized" in function/var definitions) iff it
-;;     has at least one category
-;;   - uncategorised ("uncategorized" in code) otherwise
+;; Special automatic scheduling format:
+;; * 2023
+;; ** # W01
+;; *** ## Mon
+;; **** TODO =12:00 | lunch at noon
+;; *** ## Tuesday
+
 
 ;;; Code:
 
@@ -53,14 +48,16 @@
 ;(require 'benchmark)
 ;(benchmark-elapse (org-ql-select (org-agenda-files)
 
-;; default for new TODO items
-(setq castellan-agenda-inbox creichen/org-agenda-inbox-file)
-;; TODO buffers
-(setq castellan-agenda-todos creichen/org-agenda-todo-files)
-;; calendar buffers (only ASSIGNATIONS, i.e., elements that must not be auto-scheduled)
-(setq castellan-agenda-calendars creichen/org-agenda-todo-files)
+(defvar castellan-agenda-inbox nil
+  "Name of a buffer that stores the org TODO inbox")
+(defvar castellan-agenda-todos nil
+  "List of names of files that contain TODO items")
+(defvar castellan-agenda-calendars nil
+  "List of names of files that contain calendar items.
 
-(setq castellan-calendars creichen/org-agenda-calendar-files)
+Items in these files won't show up in the (regular) TODO, only in
+the Scheduled TODO.  Intended for schedules that might be
+auto-generated and spammy.")
 
 (setq castellan-max-activity-length 8)
 
@@ -109,7 +106,7 @@
     (setq today (datetime-org-today)))
   (-filter (lambda (item) (or (castellan--calendar-item-on-or-after today item :scheduled)
 			      (castellan--calendar-item-on-or-after today item :deadline)))
-	   (org-ql-select castellan-calendars
+	   (org-ql-select castellan-agenda-calendars
 	     t
 	     :action #'castellan--org-ql-action)
 	   ))
@@ -843,7 +840,8 @@ If there is no such item, moves to the end of the buffer."
 	    (when (and (not repeater)
 		     (string= todo-type "todo"))
 	      (setq found t)))))
-      (forward-line 1))
+      (unless found
+	(forward-line 1)))
     )
   )
 

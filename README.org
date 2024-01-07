@@ -1,0 +1,42 @@
+* Castellan: Org Agenda manager
+
+Castellan provides an alternative UI to org-mode agendas.  It shows two TODO panels:
+- _scheduled TODOs_, which have a start date attached
+- _activity TODOs_, which are (or should be) tied to some _activity_.
+
+The project is currently bare-bones usable but in its early stages.
+
+** Installation
+
+There is no official package, so you will have to copy ~todo.el~ into
+a suitable place.  Set up the following:
+
+#+BEGIN_SRC elisp
+; Agenda inbox.  In the future, this will be used for quick-capture.
+  (setq castellan-agenda-inbox "my-agenda-inbox.org")
+; All relevant TODO lists.
+  (setq castellan-agenda-todos '("agenda1.org" "agenda2.org"))
+; Calendar items that shouldn't be part of the activity TODO.
+  (setq castellan-agenda-calendars '("calendar.org"))
+#+END_SRC
+
+** Usage
+You can use weekly schedule construction with the following types of
+org hierarchies:
+
+#+BEGIN_SRC
+* 2023
+** # W01
+*** ## Mon
+**** TODO =12:00 | lunch at noon
+*** ## Tuesday
+#+END_SRC
+
+** Plans
+- time tracking
+- activity tracking: can schedule blocks for an activity, and starting that activity will prioritise TODO items that are part of that activity
+- effort estimation
+- visual calendar overviews
+- auto-archiving
+- mu4e integration
+

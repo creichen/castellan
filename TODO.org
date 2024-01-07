@@ -5,23 +5,14 @@
 *** DONE go back to correct position after update
 *** DONE tests
 *** DONE display scheduled-for info (+25m) (already extracted as :scheduled; see notes below)
-org-time-string-to-time: This function takes an Org-mode time string (like those used in "SCHEDULED" or "DEADLINE" properties) and converts it into the Emacs time format.
-
-format-time-string: Once you have a time in Emacs time format, you can use this function to convert it into a custom string format.
-
-Arithmetic on Times: For performing arithmetic on times, you can use functions like time-add, time-subtract, and seconds-to-time.
-
-org-time-string-to-seconds:
-
-(SEC MIN HOUR DAY MON YEAR DOW DST TZ)
 *** DONE activity from "agenda-group" property
 *** DONE temporary: inherit week number and weekday info (+30m)
-- format: #W42, #Tue
 *** DONE separate buffer for only scheduled-for items, sorted by time and date, with week tags / weekday tags (+45m)
 *** DONE integrate calendar itemss, but only future ones
 *** DONE fix: changing TODO status stays in the right buffer
 *** DONE command to pop up both buffers, maintaining state
-*** TODO Allow setting current activity and prioritise tasks by that activity (+20m)
+*** DONE Allow setting current activity and prioritise tasks by that activity (+20m)
+*** DONE Specify time with =10:00 | or similar
 *** TODO schedule: by week, day, or time.  Support notation like "W+1" and "Tue"; also allow unscheduling (+30m)
 *** TODO key to show path for current item (since not always visible in timeline view) (+5m)
 ** Task manager B

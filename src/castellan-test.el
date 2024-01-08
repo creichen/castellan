@@ -191,7 +191,7 @@ otherwise all buffers are parsed again."
     (should (equal '(nil nil 7 0)
 		   (castellan--parse-week "## Sun")))
     (should (equal '(nil 33 nil nil)
-		   (castellan-todo--parse-week "# W33")))
+		   (castellan--parse-week "# W33")))
     (should (equal '(1978 nil nil nil)
 		   (castellan--parse-week "#1978")))
     (should (equal '(1978 nil 1 1)
@@ -222,3 +222,18 @@ otherwise all buffers are parsed again."
 		   (castellan--weekspec-format '(2022 52 nil nil))))
     (should (equal "2023 52"
 		   (castellan--weekspec-format '(2022 52 7 0) "%Y %V")))))
+
+
+(ert-deftest test-todo-to-done ()
+  "Marking TODO as DONE should work"
+  (harness-run-with-buffers
+   :todos '((A (TODO bar)))
+   :run (
+	 (should (harness-get-org-node '(A bar)))
+	 (with-current-buffer (castellan--activity-refresh)
+	   (goto-line 2)
+	   (castellan-item-done))
+	 (should (equal
+		  '((A (DONE bar)))
+		  (harness-parsed-buffers)))
+   )))

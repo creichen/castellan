@@ -89,7 +89,8 @@ auto-generated and spammy.")
                 ))
 
 (defun castellan--get-all-org-items ()
-  (org-ql-select (cons castellan-agenda-inbox castellan-agenda-todos)
+  (org-ql-select (append (when castellan-agenda-inbox (list castellan-agenda-inbox))
+			 castellan-agenda-todos)
     t
     :action #'castellan--org-ql-action))
 
@@ -113,14 +114,15 @@ auto-generated and spammy.")
 		    (datetime<= today end)))))))
 
 (defun castellan--get-all-calendar-items (&optional today)
-  (unless today
-    (setq today (datetime-org-today)))
-  (-filter (lambda (item) (or (castellan--calendar-item-on-or-after today item :scheduled)
-			      (castellan--calendar-item-on-or-after today item :deadline)))
-	   (org-ql-select castellan-agenda-calendars
-	     t
-	     :action #'castellan--org-ql-action)
-	   ))
+  (when castellan-agenda-calendars
+    (unless today
+      (setq today (datetime-org-today)))
+    (-filter (lambda (item) (or (castellan--calendar-item-on-or-after today item :scheduled)
+				(castellan--calendar-item-on-or-after today item :deadline)))
+	     (org-ql-select castellan-agenda-calendars
+	       t
+	       :action #'castellan--org-ql-action)
+	     )))
 
 (defun castellan--headline-get-activity-or-time-string (headline properties)
   "Given a HEADLINE with a '|', extract the activity or time string
@@ -364,6 +366,7 @@ parts of the result."
 
 (defun castellan--aggregate-org-items (items)
   (let ((last-file nil)
+	(last-buffer nil)
 	(last-level 0)
 	(activity nil)
 	(prefixes nil)
@@ -406,15 +409,19 @@ parts of the result."
 	  (unless (or (datetime-has-date scheduled)
 		      (datetime-has-time scheduled))
 	    (setq scheduled nil)))
-	(when (not (string= file last-file))
+	(when (not (and (string= file last-file)
+			(eq buffer last-buffer)))
 	  (setq last-file file)
+	  (setq last-buffer buffer)
 	  (setq last-level 0)
 	  (setq activity nil)
 	  (setq prefixes nil)
 	  (setq weekspec nil)
-	  (setq marker-pos (list buffer position))
+	  (setq marker-pos (list buffer file position))
 	  (setq weekspec-stack nil)
-	  (setq last-headline (castellan--org-file-strip file)))
+	  (setq last-headline (if file
+				  (castellan--org-file-strip file)
+				"<no-file-name>")))
 	(while (> last-level level)
 	  ;; level down
 	  (setq last-level (- last-level 1))
@@ -636,11 +643,13 @@ REQUIRED-TYPE, this function returns nil."
 (defmacro castellan--in-org-buffer (pos &rest body)
   "Execute BODY in buffer POS"
   `(-let [(buffer filename position) pos]
-    (with-current-buffer (find-file filename)
-      (goto-char position)
-      ,@body
-      )
-    ))
+     (with-current-buffer (or (and (buffer-live-p buffer)
+				   buffer)
+			      (find-file filename))
+       (goto-char position)
+       ,@body
+       )
+     ))
 
 (defun castellan--all-windows ()
   "Returns a list of all windows that are displaying either of the todo buffers."
@@ -689,9 +698,9 @@ buffer will be updated."
 				       (castellan--schedule-agenda-buffer)))))
      ,@body
      ;; recover position
-     (unless (eq refresh 'schedule)
+     (unless (eq ,refresh 'schedule)
        (castellan--activity-refresh))
-     (unless (eq refresh 'activity)
+     (unless (eq ,refresh 'activity)
        (castellan--schedule-refresh))
      (dolist (buffer-castellan-id buffer-pos-alist)
        (-let [(buffer . castellan-id) buffer-castellan-id]
@@ -726,9 +735,9 @@ buffer will be updated."
    (-let* ((info (castellan--info-at-point 'ITEM))
 	   ((&plist :pos pos) info))
      (castellan--in-org-buffer pos
-				    ;; disable notes
-				    (let ((current-prefix-arg 0)) (org-todo mode))
-				    ))
+			       ;; disable notes
+			       (let ((current-prefix-arg 0)) (org-todo mode))
+			       ))
    ))
 
 (defun castellan-set-activity (new-activity)
@@ -818,8 +827,8 @@ buffer will be updated."
 	  (castellan--aggregate-org-items
 	   (append
 	    (castellan--get-all-calendar-items)
-	    (castellan--get-all-org-items))
-	   ))
+	    (castellan--get-all-org-items)
+	   )))
 	 #'castellan--schedule<))))
    buffer))
 

@@ -273,8 +273,6 @@ using `datetime-format'."
     (-let* (((_ _ _ day month year _ _ _) datetime)
 	    ((week weekday year)
 	     (calendar-iso-from-absolute
-	      ;; calendar-absolute-from-gregorian has a long-standing bug
-	      ;; that flips month/day order, so we need to work around that:
 	      (calendar-absolute-from-gregorian (list month day year)))))
       (list year
 	    week
@@ -288,12 +286,13 @@ using `datetime-format'."
 
 Returns (nil nil nil DAY MON YEAR _ _ _).  The last three values
 are currently nil but might change in the future."
-  ;; Work around bug in calendar-absolute-from-gregorian:
-  (-let [(m d y) (calendar-iso-from-absolute (org-today))]
+  ;; calendar-gregorian-from-absolute: work around bug that swaps month and day
+  (-let [(m d y) (calendar-gregorian-from-absolute (org-today))]
     (list nil nil nil d m y nil nil nil)))
 
 (defun castellan--weekspec-to-datetime (weekspec)
   (-let* (((week-year week weekday-key weekday) weekspec)
+	  ;; calendar-gregorian-from-absolute: work around bug that swaps month and day
 	  ((m d y) (calendar-gregorian-from-absolute
                     (calendar-iso-to-absolute (list week (or weekday 1) week-year)))))
       (list nil nil nil d m y weekday nil nil)))

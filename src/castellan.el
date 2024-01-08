@@ -1,4 +1,4 @@
-;;; todo.el --- Castellan activity tracker: TODO management -*- lexical-binding: t -*-
+;;; castellan.el --- Castellan activity tracker: TODO management -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Christoph Reichenbach
 
@@ -140,9 +140,9 @@ Returns NIL if not present, otherwise a pair whose car is
       ;; else: time string
       act)))
 
-(defun castellan-todo--activity< (item1 item2)
-  (let* ((act1 (castellan-todo--activity item1))
-	 (act2 (castellan-todo--activity item2)))
+(defun castellan--activity< (item1 item2)
+  (let* ((act1 (castellan--activity item1))
+	 (act2 (castellan--activity item2)))
     (and (equal act1 castellan-current-activity)
 	 (not (equal act2 castellan-current-activity)))))
 
@@ -195,31 +195,31 @@ Formatting will use `castellan-time-locale', if set, instead of
 	(format-time-string format  (datetime-to-time datetime)))
     ""))
 
-(defun castellan-todo--scheduled-p (item)
+(defun castellan--scheduled-p (item)
   (-let [(_ . (&plist :headline headline :scheduled (datetime weekspec))) item]
     (or (datetime-has-date datetime)
 	(castellan--weekspec-complete-p weekspec))))
 
-(defun castellan-todo--activity (item)
+(defun castellan--activity (item)
   "Returns the activity that ITEM belongs to, or NIL."
   (-let [(_ . (&plist :activity activity)) item]
     activity))
 
-(defun castellan-todo--repeater (item)
+(defun castellan--repeater (item)
   "Returns NIL if ITEM has no repeater or (TYPE UNIT VALUE) if it has.
 
 VALUE is an int, and UNIT can be 'day or 'week."
   (-let [(_ . (&plist :repeater repeater)) item]
     repeater))
 
-(defun castellan-todo--repeater (item)
+(defun castellan--repeater (item)
   "Returns NIL if ITEM has no repeater or (TYPE UNIT VALUE) if it has.
 
 VALUE is an int, and UNIT can be 'day or 'week."
   (-let [(_ . (&plist :repeater repeater)) item]
     repeater))
 
-(defun castellan-todo--schedule-datetime (item)
+(defun castellan--schedule-datetime (item)
   "The 9-tuple datetime value for ITEM's scheduled time.
 
 Combines the internal datetime and weekspec specifications as
@@ -233,13 +233,13 @@ appropriate."
 		 (append (take 3 datetime) (cdddr week-datetime))
 	       week-datetime))))))
 
-(defun castellan-todo--schedule< (item1 item2)
+(defun castellan--schedule< (item1 item2)
   ;; move repeaters before normal events
-  (if (and (castellan-todo--repeater item1)
-	   (not (castellan-todo--repeater item2)))
+  (if (and (castellan--repeater item1)
+	   (not (castellan--repeater item2)))
       t
-    (time-less-p (datetime-to-time (castellan-todo--schedule-datetime item1))
-		 (datetime-to-time (castellan-todo--schedule-datetime item2)))))
+    (time-less-p (datetime-to-time (castellan--schedule-datetime item1))
+		 (datetime-to-time (castellan--schedule-datetime item2)))))
 
 (defun weekdatetime-format (weekdatetime &optional format)
   (-let [(datetime weekspec) weekdatetime]
@@ -316,7 +316,7 @@ Allows for WD-KEY and WD to be NIL."
 			 format))
     ""))
 
-(defun castellan-todo--parse-week (header &optional weekspec-plist)
+(defun castellan--parse-week (header &optional weekspec-plist)
   (unless weekspec-plist
     (setq weekspec-plist (list nil nil nil nil)))
   (-let* ((header-max-5  (substring header 0 (min 5
@@ -437,7 +437,7 @@ parts of the result."
 	    (push new-activity castellan-all-activities))
 	  (setq activity new-activity))
 	(setq weekspec
-	      (castellan-todo--parse-week headline weekspec))
+	      (castellan--parse-week headline weekspec))
 
 	(setq last-headline headline)
 	;; produce output:
@@ -487,11 +487,11 @@ parts of the result."
    ((not priority)
     " ")
    ((eq ?A priority)
-    (propertize "A" 'face 'castellan-todo-priority-A))
+    (propertize "A" 'face 'castellan-priority-A))
    ((eq ?A priority)
-    (propertize "B" 'face 'castellan-todo-priority-B))
+    (propertize "B" 'face 'castellan-priority-B))
    (t (propertize
-       (format "%c" priority) 'face 'castellan-todo-priority-C))
+       (format "%c" priority) 'face 'castellan-priority-C))
   ))
 
 
@@ -522,11 +522,11 @@ parts of the result."
 		       (indentation (make-string level ?>)))
 		 (format (concat "%-" (format "%d" castellan-max-activity-length) "s  %-16s %9s %2s%s %s\n")
 			 activity
-			 (propertize (weekdatetime-format scheduled) 'face 'castellan-todo-scheduled-time)
+			 (propertize (weekdatetime-format scheduled) 'face 'castellan-scheduled-time)
 			 (castellan--propertize-todo-keyword todo-status)
 			 prio
-			 (propertize indentation 'face 'castellan-todo-indentation)
-			 (propertize headline 'face 'castellan-todo-headline)))
+			 (propertize indentation 'face 'castellan-indentation)
+			 (propertize headline 'face 'castellan-headline)))
 	       ]
 	  (insert (propertize (propertize next-line
 					  'castellan item)
@@ -543,7 +543,7 @@ parts of the result."
 	      (activity (if activity-raw
 			    activity-raw
 			  ""))
-	      (scheduled (castellan-todo--schedule-datetime item))
+	      (scheduled (castellan--schedule-datetime item))
 	      ((year week _ _) (datetime-week scheduled))
 	      (weekday (datetime-format scheduled "%Y-%m-%d  %A")))
 	(when repeater
@@ -578,11 +578,11 @@ parts of the result."
 		       (indentation (make-string level ?>)))
 		 (format (concat "  %-" (format "%d" castellan-max-activity-length) "s  %-5s %9s %2s%s %s\n")
 			 activity
-			 (propertize (datetime-format scheduled "%H:%M") 'face 'castellan-todo-scheduled-time)
+			 (propertize (datetime-format scheduled "%H:%M") 'face 'castellan-scheduled-time)
 			 (castellan--propertize-todo-keyword todo-status)
 			 prio
-			 (propertize indentation 'face 'castellan-todo-indentation)
-			 (propertize headline 'face 'castellan-todo-headline)))
+			 (propertize indentation 'face 'castellan-indentation)
+			 (propertize headline 'face 'castellan-headline)))
 	       ]
 	  (insert (propertize (propertize next-line
 					  'castellan item)
@@ -599,17 +599,17 @@ parts of the result."
   (when (string-match (concat prefix "\\([0-9]+\\)") str)
     (string-to-number (match-string 1 str))))
 
-(defun castellan-todo--debug ()
+(defun castellan--debug ()
   (interactive)
   (message (format "%s"
-		   ;(castellan--week-info (plist-get (castellan-todo--info-at-point) :scheduled))
-		   (castellan-todo--info-at-point)
+		   ;(castellan--week-info (plist-get (castellan--info-at-point) :scheduled))
+		   (castellan--info-at-point)
 		   ;(get-text-property (point) 'castellan-id)
 )))
 
 
 
-(defun castellan-todo--info-at-point (&optional required-type buf-point)
+(defun castellan--info-at-point (&optional required-type buf-point)
   "Returns the plist that describes the item or marker at point.
 
 If REQUIRED-TYPE is not nil, it should be 'ITEM or 'MARKER.
@@ -623,17 +623,17 @@ REQUIRED-TYPE, this function returns nil."
       prop)))
 
 
-(defun castellan-todo-jump-to-item ()
+(defun castellan-jump-to-item ()
   "Jump to position of the TODO item at point."
   (interactive)
-  (-let [(&plist :pos (buffer filename position)) (castellan-todo--info-at-point)]
+  (-let [(&plist :pos (buffer filename position)) (castellan--info-at-point)]
     (when filename
       (find-file filename)
       (when position
 	(goto-char position)))
     ))
 
-(defmacro castellan-todo--in-org-buffer (pos &rest body)
+(defmacro castellan--in-org-buffer (pos &rest body)
   "Execute BODY in buffer POS"
   `(-let [(buffer filename position) pos]
     (with-current-buffer (find-file filename)
@@ -642,38 +642,38 @@ REQUIRED-TYPE, this function returns nil."
       )
     ))
 
-(defun castellan-todo--all-windows ()
+(defun castellan--all-windows ()
   "Returns a list of all windows that are displaying either of the todo buffers."
-  (append (get-buffer-window-list (castellan-todo--activity-agenda-buffer))
-	  (get-buffer-window-list (castellan-todo--schedule-agenda-buffer))))
+  (append (get-buffer-window-list (castellan--activity-agenda-buffer))
+	  (get-buffer-window-list (castellan--schedule-agenda-buffer))))
 
 ;; ;; This version assumes that it needs to distinguish windows
 ;;
-;; (defmacro castellan-todo--update (&rest body)
+;; (defmacro castellan--update (&rest body)
 ;;   "Execute body and then update the TODO buffer"
-;;   `(-let* ((windows (castellan-todo--all-windows))
+;;   `(-let* ((windows (castellan--all-windows))
 ;; 	   (old-buffer (current-buffer))
 ;; 	   ;; remember where we were
 ;; 	   (window-pos-alist (mapcar (lambda (window)
 ;; 				       (-let [(&plist :castellan-id castellan-id)
 ;; 					      (with-current-buffer (window-buffer window)
-;; 						(castellan-todo--info-at-point nil (window-point window)))]
+;; 						(castellan--info-at-point nil (window-point window)))]
 ;; 					 (cons window castellan-id)))
 ;; 				     windows)))
 ;;      ,@body
 ;;      ;; recover position
-;;      (castellan-todo--activity-refresh)
-;;      (castellan-todo--schedule-refresh)
+;;      (castellan--activity-refresh)
+;;      (castellan--schedule-refresh)
 ;;      (dolist (window-castellan-id window-pos-alist)
 ;;        (-let [(window . castellan-id) window-castellan-id]
 ;; 	 (message "looking in [%s] for [%s]" window castellan-id)
 ;; 	 (with-current-buffer  (window-buffer window)
-;; 	   (castellan-todo--goto-id castellan-id)
+;; 	   (castellan--goto-id castellan-id)
 ;; 	   (set-window-point window (point)))))
 ;;      (switch-to-buffer old-buffer)
 ;;      ))
 
-(defmacro castellan-todo--update (refresh &rest body)
+(defmacro castellan--update (refresh &rest body)
   "Execute BODY and then refresh the agenda buffers.
 
 If REFRESH is 'activity or 'schedule, then only the corresponding
@@ -683,20 +683,20 @@ buffer will be updated."
 	   (buffer-pos-alist (mapcar (lambda (buffer)
 				   (-let [(&plist :castellan-id castellan-id)
 					  (with-current-buffer buffer
-					    (castellan-todo--info-at-point nil (point)))]
+					    (castellan--info-at-point nil (point)))]
 				     (cons buffer castellan-id)))
-				 (list (castellan-todo--activity-agenda-buffer)
-				       (castellan-todo--schedule-agenda-buffer)))))
+				 (list (castellan--activity-agenda-buffer)
+				       (castellan--schedule-agenda-buffer)))))
      ,@body
      ;; recover position
      (unless (eq refresh 'schedule)
-       (castellan-todo--activity-refresh))
+       (castellan--activity-refresh))
      (unless (eq refresh 'activity)
-       (castellan-todo--schedule-refresh))
+       (castellan--schedule-refresh))
      (dolist (buffer-castellan-id buffer-pos-alist)
        (-let [(buffer . castellan-id) buffer-castellan-id]
 	 (switch-to-buffer buffer)
-	 (castellan-todo--goto-id castellan-id)
+	 (castellan--goto-id castellan-id)
 	 (let ((new-point (point)))
 	   (dolist (window (get-buffer-window-list buffer))
 	     (set-window-point window new-point))
@@ -705,7 +705,7 @@ buffer will be updated."
      ))
 
 
-(defun castellan-todo--goto-id (id)
+(defun castellan--goto-id (id)
   (interactive)
   (goto-char (point-min))
   (let ((found nil))
@@ -720,18 +720,18 @@ buffer will be updated."
     (unless found
       (message "Item has disappeared"))))
 
-(defun castellan-todo--item-update (mode)
+(defun castellan--item-update (mode)
   (interactive)
-  (castellan-todo--update t
-   (-let* ((info (castellan-todo--info-at-point 'ITEM))
+  (castellan--update t
+   (-let* ((info (castellan--info-at-point 'ITEM))
 	   ((&plist :pos pos) info))
-     (castellan-todo--in-org-buffer pos
+     (castellan--in-org-buffer pos
 				    ;; disable notes
 				    (let ((current-prefix-arg 0)) (org-todo mode))
 				    ))
    ))
 
-(defun castellan-todo-set-activity (new-activity)
+(defun castellan-set-activity (new-activity)
   "Sets the current focus activity for the activity agenda"
   (interactive
    (list
@@ -740,87 +740,87 @@ buffer will be updated."
   (unless (equal new-activity castellan-current-activity)
     (setq castellan-current-activity (unless (string= "" new-activity)
 				       new-activity))
-    (with-current-buffer (castellan-todo--activity-refresh)
-      (castellan-todo-find-first))))
+    (with-current-buffer (castellan--activity-refresh)
+      (castellan-find-first))))
 
-(defun castellan-todo-item-done ()
+(defun castellan-item-done ()
   "Mark TODO item at point as DONE"
   (interactive)
-  (castellan-todo--item-update "DONE"))
+  (castellan--item-update "DONE"))
 
-(defun castellan-todo-item-todo ()
+(defun castellan-item-todo ()
   "Mark TODO item at point as TODO"
   (interactive)
-  (castellan-todo--item-update "TODO"))
+  (castellan--item-update "TODO"))
 
-(defun castellan-todo-item-cancel ()
+(defun castellan-item-cancel ()
   "Mark TODO item at point as CANCELLED"
   (interactive)
-  (castellan-todo--item-update "CANCELLED"))
+  (castellan--item-update "CANCELLED"))
 
-(defvar-keymap castellan-todo-mode-map
+(defvar-keymap castellan-mode-map
   :doc "Keymap for castellan TODO management."
-  "A"             #'castellan-todo-set-activity
-  "RET"           #'castellan-todo-jump-to-item
-  "?"             #'castellan-todo--debug
-  "+"             #'castellan-todo-item-done
-  "-"             #'castellan-todo-item-todo
-  "<backspace>"   #'castellan-todo-item-cancel
+  "A"             #'castellan-set-activity
+  "RET"           #'castellan-jump-to-item
+  "?"             #'castellan--debug
+  "+"             #'castellan-item-done
+  "-"             #'castellan-item-todo
+  "<backspace>"   #'castellan-item-cancel
   )
 
-(define-derived-mode castellan-todo--mode fundamental-mode "castellan:Todo"
+(define-derived-mode castellan--mode fundamental-mode "castellan:Todo"
   "Castellan activity manager: Integrated TODO mode.
 
-\\{castellan-todo-mode-map}"
-  (castellan-todo--mode-setup)
+\\{castellan-mode-map}"
+  (castellan--mode-setup)
   :mode-class 'special
   :group 'castellan
-  :keymap castellan-todo-mode-map
+  :keymap castellan-mode-map
   )
 
-(defun castellan-todo--mode-setup ()
+(defun castellan--mode-setup ()
   (hl-line-mode 1)    ; Enable line highlighting
-  (use-local-map castellan-todo-mode-map)  ; Activate our keymap
+  (use-local-map castellan-mode-map)  ; Activate our keymap
   )
 
-(defun castellan-todo--activity-agenda-buffer ()
+(defun castellan--activity-agenda-buffer ()
   (get-buffer-create "*Castellan Activity TODO*"))
 
-(defun castellan-todo--activity-refresh ()
- (let ((buffer (castellan-todo--activity-agenda-buffer)))
+(defun castellan--activity-refresh ()
+ (let ((buffer (castellan--activity-agenda-buffer)))
    (with-current-buffer buffer
      (read-only-mode)
      (let ((inhibit-read-only t))
        (erase-buffer)
-       (castellan-todo--mode)
+       (castellan--mode)
        (let ((items (castellan--aggregate-org-items
 		     (castellan--get-all-org-items))))
 	 (castellan--insert-aggregate-items
 	  (if castellan-current-activity
-	      (sort items #'castellan-todo--activity<)
+	      (sort items #'castellan--activity<)
 	      items)))))
    buffer))
 
-(defun castellan-todo--schedule-agenda-buffer ()
+(defun castellan--schedule-agenda-buffer ()
   (get-buffer-create "*Castellan Scheduled TODO*"))
 
-(defun castellan-todo--schedule-refresh ()
- (let ((buffer (castellan-todo--schedule-agenda-buffer)))
+(defun castellan--schedule-refresh ()
+ (let ((buffer (castellan--schedule-agenda-buffer)))
    (with-current-buffer buffer
      (read-only-mode)
      (let ((inhibit-read-only t))
        (erase-buffer)
-       (castellan-todo--mode)
+       (castellan--mode)
        (castellan--insert-aggregate-scheduled-items
 	(sort
 	 (-filter
-	  #'castellan-todo--scheduled-p
+	  #'castellan--scheduled-p
 	  (castellan--aggregate-org-items
 	   (append
 	    (castellan--get-all-calendar-items)
 	    (castellan--get-all-org-items))
 	   ))
-	 #'castellan-todo--schedule<))))
+	 #'castellan--schedule<))))
    buffer))
 
 ;; NASTY BUT APPARENTLY NECESSARY
@@ -829,57 +829,57 @@ buffer will be updated."
 
 ; --------------------------------------------------------------------------------
 
-(defface castellan-todo-headline
+(defface castellan-headline
   '((t :inherit org-level-3))
   "Face for TODO item headlines in castellan."
   :group 'castellan)
 
-(defface castellan-todo-indentation
+(defface castellan-indentation
   '((t :inherit org-indent))
   "Face for TODO item indentation markers in castellan."
   :group 'castellan)
 
-(defface castellan-todo-effort
+(defface castellan-effort
   '((t :inherit org-duration))
   "Face for TODO item effort/estimated duration in castellan."
   :group 'castellan)
 
-(defface castellan-todo-priority-A
+(defface castellan-priority-A
   '((t :inherit org-upcoming-deadline))
   "Face for TODO item headlines in castellan."
   :group 'castellan)
 
-(defface castellan-todo-priority-B
+(defface castellan-priority-B
   '((t :inherit org-distant-deadline))
   "Face for TODO item headlines in castellan."
   :group 'castellan)
 
-(defface castellan-todo-priority-C
+(defface castellan-priority-C
   '((t :inherit org-priority))
   "Face for TODO item headlines in castellan."
   :group 'castellan)
 
-(defface castellan-todo-scheduled-time
+(defface castellan-scheduled-time
   '((t :inherit org-scheduled))
   "Face for TODO item scheduled start time in castellan."
   :group 'castellan)
 
-(defface castellan-todo-delegated
+(defface castellan-delegated
   '((t :inherit org-tag))
   "Face for delegated TODO items in castellan."
   :group 'castellan)
 
-(defface castellan-todo-delegatee-name
+(defface castellan-delegatee-name
   '((t :inherit font-lock-function-name-face))
   "Face for the name of the person a task is delegated to in castellan."
   :group 'castellan)
 
-(defface castellan-todo-waiting
+(defface castellan-waiting
   '((t :inherit org-warning))
   "Face for TODO items waiting for someone in castellan."
   :group 'castellan)
 
-(defface castellan-todo-waiting-name
+(defface castellan-waiting-name
   '((t :inherit font-lock-variable-name-face))
   "Face for the name of the person a task is waiting for in castellan."
   :group 'castellan)
@@ -908,7 +908,7 @@ buffer will be updated."
 
 ;; --------------------------------------------------------------------------------
 
-(defun castellan-todo-find-first ()
+(defun castellan-find-first ()
   "Jumps to the first incomplete TODO item at or below point.
 
 If there is no such item, moves to the end of the buffer."
@@ -916,7 +916,7 @@ If there is no such item, moves to the end of the buffer."
   (goto-char (point-min))
   (let ((found nil))
     (while (and (not found) (not (eobp)))  ; While not found and not at end of buffer
-      (let ((item (castellan-todo--info-at-point 'ITEM)))
+      (let ((item (castellan--info-at-point 'ITEM)))
 	(when item
 	  (-let [(&plist :todo-type todo-type :repeater repeater) item]
 	    (when (and (not repeater)
@@ -927,11 +927,11 @@ If there is no such item, moves to the end of the buffer."
     )
   )
 
-(defun castellan-todo ()
+(defun castellan ()
   "Shows both castellan TODO buffers and switch to the scheduled one."
   (interactive)
-  (pop-to-buffer (castellan-todo--activity-refresh))
-  (pop-to-buffer (castellan-todo--schedule-refresh))
-  (castellan-todo-find-first))
+  (pop-to-buffer (castellan--activity-refresh))
+  (pop-to-buffer (castellan--schedule-refresh))
+  (castellan-find-first))
 
-(provide 'castellan-todo)
+(provide 'castellan)

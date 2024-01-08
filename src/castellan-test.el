@@ -1,4 +1,4 @@
-;;; todo-test.el --- tests for castellan's todo.el -*- lexical-binding: t -*-
+;;; castellan-test.el --- tests for castellan -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Christoph Reichenbach
 
@@ -30,13 +30,10 @@
 (require 'package)
 (package-initialize)
 
-(load-file "todo.el")
 (require 'el-mock)
 (require 'dash)
 
 ;; Set up default key bindings
-
-(mu4e-tagging-setup-default-bindings)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test harness
@@ -87,34 +84,42 @@
   "Map a symbol to the corresponding test buffer name"
   (concat "*castellan-test-harness-todo-" (symbol-name buf-sym) "*"))
 
-(defmacro harness-run-with-buffers (buffers &rest commands)
-  "Run COMMANDS after setting up BUFFERS.
+(defmacro harness-run-with-buffers (&rest spec)
+  "Run commands after setting up buffers.
+
+SPEC takes a number of keyword parameters:
+
+- :run COMMANDS is a list of command to run
+- :todos BUFFERS is a list of buffer specs for agenda todo buffers
 
 BUFFERS are an alist of the form ((ID BODY) ... (ID BODY)), where
 ID is a symbol that identifies the buffer and BODY is an
 S-expression that defines the buffer contents, such
 as (headline (TODO task-item) (DONE done-item) (subheading))."
-  `(progn
-     (setq harness--test-buffers-alist nil)
-     (setq castellan-agenda-todos nil)
-     (dolist (buffer-spec ,buffers)
-       (-let* (((buf-name-spec buf-body-spec) buffer-spec)
-	       (buf-name (harness--buffer-name buf-name-spec))
-	       (buffer (get-buffer-create buf-name)))
-	 (with-current-buffer buffer
-	   (erase-buffer)
-	   (org-mode)
-	   (harness--unparse-agenda buf-body-spec))
-	 (push buffer
-	       castellan-agenda-todos)
-	 (push (cons buf-name-spec buffer)
-	       harness--test-buffers-alist)))
-     (setq castellan-agenda-todos (nreverse castellan-agenda-todos))
-     (setq harness--test-buffers-alist (nreverse harness--test-buffers-alist))
-     ,@commands
-     ;; on success only:
-     (dolist (buf castellan-agenda-todos)
-       (kill-buffer buf))))
+  (-let [(&plist :run commands :todos todo-buffers) spec]
+    `(progn
+       (setq harness--test-buffers-alist nil)
+       (setq castellan-agenda-inbox nil)
+       (setq castellan-agenda-todos nil)
+       (setq castellan-agenda-calendars nil)
+       (dolist (buffer-spec ,todo-buffers)
+	 (-let* (((buf-name-spec buf-body-spec) buffer-spec)
+		 (buf-name (harness--buffer-name buf-name-spec))
+		 (buffer (get-buffer-create buf-name)))
+	   (with-current-buffer buffer
+	     (erase-buffer)
+	     (org-mode)
+	     (harness--unparse-agenda buf-body-spec))
+	   (push buffer
+		 castellan-agenda-todos)
+	   (push (cons buf-name-spec buffer)
+		 harness--test-buffers-alist)))
+       (setq castellan-agenda-todos (nreverse castellan-agenda-todos))
+       (setq harness--test-buffers-alist (nreverse harness--test-buffers-alist))
+       ,@commands
+       ;; on success only:
+       (dolist (buf castellan-agenda-todos)
+	 (kill-buffer buf)))))
 
 (defun harness-get-buffer (buffer-id)
   "Retrieves the buffer for a given BUFFER-ID symbol."
@@ -161,39 +166,40 @@ otherwise all buffers are parsed again."
 (ert-deftest test-harness ()
   "Validate test harness"
   (harness-run-with-buffers
-   '((A (foo (TODO bar) (TODO alphabeta)))
-     (B (quux)))
-   (should (harness-get-buffer 'A))
-   (should (harness-get-buffer 'B))
-   (should (not (harness-get-buffer 'C)))
-   ;; next one should fail
-   (should (equal "bar"
-		  (plist-get (cadr (harness-get-org-node '(A foo bar)))
-			     :raw-value
-			     )))
-	    '((A (foo (TODO bar) (TODO alphabeta)))
-	      (B (quux))))
+   :todos '((A (foo (TODO bar) (TODO alphabeta)))
+	      (B (quux)))
+   :run (
+	 (should (harness-get-buffer 'A))
+	 (should (harness-get-buffer 'B))
+	 (should (not (harness-get-buffer 'C)))
+	 ;; next one should fail
+	 (should (equal "bar"
+			(plist-get (cadr (harness-get-org-node '(A foo bar)))
+				   :raw-value
+				   )))
+	 '((A (foo (TODO bar) (TODO alphabeta)))
+	   (B (quux))))
    (should (equal
 	    '((A (foo (TODO bar) (TODO alphabeta)))
 	      (B (quux)))
 	    (harness-parsed-buffers)))
-   )
+   ))
 
 (ert-deftest test-parse-weekspec ()
   "Validate week and weekday parsing"
-  (let (calendar-week-start-day 1)
+  (let ((calendar-week-start-day 1))
     (should (equal '(nil nil 7 0)
-		   (castellan-todo--parse-week "#Sun")))
+		   (castellan--parse-week "## Sun")))
     (should (equal '(nil 33 nil nil)
-		   (castellan-todo--parse-week "#W33")))
+		   (castellan-todo--parse-week "# W33")))
     (should (equal '(1978 nil nil nil)
-		   (castellan-todo--parse-week "#Y1978")))
+		   (castellan--parse-week "#1978")))
     (should (equal '(1978 nil 1 1)
-		   (castellan-todo--parse-week "#Y1978" '(nil nil 1 1))))
+		   (castellan--parse-week "#1978" '(nil nil 1 1))))
     (should (equal '(1978 2 nil nil)
-		   (castellan-todo--parse-week "#Y1978" '(nil 2 nil nil))))
+		   (castellan--parse-week "#1978" '(nil 2 nil nil))))
     (should (equal '(2000 nil 2 2)
-		   (castellan-todo--parse-week "#Tue" '(2000 nil nil nil))))
+		   (castellan--parse-week "## Tue" '(2000 nil nil nil))))
   ))
 
 (ert-deftest test-weekspec-to-datetime ()
@@ -207,12 +213,12 @@ otherwise all buffers are parsed again."
 
 (ert-deftest test-weekspec-format ()
   "Weekspec stringification"
-  (let castellan-time-locale "C"
-       (should (equal "2000 W03: Wed"
-		      (castellan--weekspec-format '(2000 3 3 3))))
-       (should (equal "2022 W52: Sun"
-		      (castellan--weekspec-format '(2022 52 7 0))))
-       (should (equal "2022 W52"
-		      (castellan--weekspec-format '(2022 52 nil nil))))
-       (should (equal "2023 52"
-		      (castellan--weekspec-format '(2022 52 7 0) "%Y %V")))))
+  (let ((castellan-time-locale "C"))
+    (should (equal "2000 W03: Wed"
+		   (castellan--weekspec-format '(2000 3 3 3))))
+    (should (equal "2022 W52: Sun"
+		   (castellan--weekspec-format '(2022 52 7 0))))
+    (should (equal "2022 W52"
+		   (castellan--weekspec-format '(2022 52 nil nil))))
+    (should (equal "2023 52"
+		   (castellan--weekspec-format '(2022 52 7 0) "%Y %V")))))

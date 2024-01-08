@@ -25,7 +25,7 @@ You can use weekly schedule construction with the following types of
 org hierarchies:
 
 #+BEGIN_SRC
-* 2023
+* #2023
 ** # W01
 *** ## Mon
 **** TODO =12:00 | lunch at noon

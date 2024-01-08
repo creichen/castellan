@@ -71,6 +71,9 @@ auto-generated and spammy.")
 (defvar castellan-time-locale "C"
   "Locale for printing weekday names")
 
+(defvar castellan-agenda-auto-revert nil
+  "Whether to mark castellan agenda buffers as  auto-revert")
+
 
 (defun castellan--org-ql-action ()
               ;; At each heading, collect the necessary information
@@ -717,17 +720,18 @@ buffer will be updated."
 (defun castellan--goto-id (id)
   (interactive)
   (goto-char (point-min))
-  (let ((found nil))
-    (while (and (not found) (not (eobp)))  ; While not found and not at end of buffer
-      (if (equal id
-		 (get-text-property (point) 'castellan-id))
-          (progn
-	    (setq found t)
-	    )
-	(forward-line 1))
-      )
-    (unless found
-      (message "Item has disappeared"))))
+  (when id
+    (let ((found nil))
+      (while (and (not found) (not (eobp)))  ; While not found and not at end of buffer
+	(if (equal id
+		   (get-text-property (point) 'castellan-id))
+            (progn
+	      (setq found t)
+	      )
+	  (forward-line 1))
+	)
+      (unless found
+	(message "Item has disappeared")))))
 
 (defun castellan--item-update (mode)
   (interactive)
@@ -787,10 +791,20 @@ buffer will be updated."
   :keymap castellan-mode-map
   )
 
+(defun castellan--all-org-buffers ()
+  (mapcar #'get-buffer-create (append
+			       (when castellan-agenda-inbox
+				 (list castellan-agenda-inbox))
+			       castellan-agenda-todos
+			       castellan-agenda-calendars)))
+
 (defun castellan--mode-setup ()
   (hl-line-mode 1)    ; Enable line highlighting
   (use-local-map castellan-mode-map)  ; Activate our keymap
-  )
+  (when castellan-agenda-auto-revert
+    (dolist (buffer (castellan--all-org-buffers))
+      (with-current-buffer buffer
+	(auto-revert-mode 1)))))
 
 (defun castellan--activity-agenda-buffer ()
   (get-buffer-create "*Castellan Activity TODO*"))

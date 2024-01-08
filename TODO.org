@@ -13,6 +13,10 @@
 *** DONE command to pop up both buffers, maintaining state
 *** DONE Allow setting current activity and prioritise tasks by that activity (+20m)
 *** DONE Specify time with =10:00 | or similar
+*** DONE audo-load
+*** TODO bug: calendar entries not showing any more?
+*** TODO bug: activity via "Activity | Hedline" misattributed to subsequent siblings, not just children
+*** TODO TAB to with-temp-buffer-window show the entire entry
 *** TODO schedule: by week, day, or time.  Support notation like "W+1" and "Tue"; also allow unscheduling (+30m)
 *** TODO key to show path for current item (since not always visible in timeline view) (+5m)
 ** Task manager B

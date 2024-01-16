@@ -19,6 +19,50 @@
 *** DONE button for `re-generate current': "g"
 *** DONE "enter': jump to buffer in open window if present
 *** TODO auto-rebuild after modifications, if idle, using after-revert-hook + after-change-functions and triggering run-with-idle-timer
+(defcustom castellan-... nil
+  "comments
+  :type '(repeat string)
+  :set #castellan--set-update-buf
+  :group castellan)
+
+(setq castellan--idle-refresh-timer nil)
+
+(defun castellan--idle-refresh-run ()
+  (castellan-refresh)
+  (setq castellan--idle-refresh-timer nil))
+
+(defun castellan--request-idle-refresh ()
+  (unless castellan--idle-refresh-timer
+    (setq castellan--idle-refresh-timer
+    (run-with-idle-timer 2 nil #'castellan--idle-refresh-run))))
+
+(defun castellan--set-update-buf (var filenames)
+  ;; filenames might be just one filename, for inbox
+  (set var filenames))
+
+(defun castellan--tracked-file-was-updated ()
+  "Function to call when a tracked file is updated."
+  ;;(message "Tracked file was updated: %s" (buffer-file-name))
+  (castellan--request-idle-refresh))
+
+(defun castellan--install-update-hooks ()
+  "Install hooks for tracked files if they are not already installed."
+  (when (and (buffer-file-name)
+             (member (buffer-file-name) castellan-tracked-files)
+             (not (local-variable-p 'castellan-hooks-installed)))
+    (add-hook 'after-revert-hook #'castellan--tracked-file-was-updated nil t)
+    (add-hook 'after-change-functions #'castellan--tracked-file-was-updated nil t)
+    (setq-local castellan-hooks-installed t)))
+
+(defun castellan--setup-tracked-buffers ()
+  "Install update hooks for already open tracked files."
+  (dolist (buf ...))
+    (with-current-buffer buf
+      (castellan--install-update-hooks)))
+
+;; Call this function when we start
+(castellan--setup-tracked-buffers)
+
 *** TODO `defcustom` for list of buffers-of-interest so `customize-set-variable` can do its thing
 *** TODO 'magic' scheduled TODO items for activities that link to/update the activity agenda
 *** TODO todo-style "WAIT" and todo-style "DELEGATED" with names attached

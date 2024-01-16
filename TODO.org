@@ -15,8 +15,8 @@
 *** DONE Specify time with =10:00 | or similar
 *** DONE audo-load
 *** DONE bug: calendar entries not showing any more?
-*** TODO agenda schedule: don't show time for items without a time
-*** TODO button for `re-generate current'
+*** DONE agenda schedule: don't show time for items without a time
+*** DONE button for `re-generate current': "g"
 *** TODO "enter': jump to buffer in open window if present
 *** TODO auto-rebuild after modifications, if idle, using after-revert-hook + after-change-functions and triggering run-with-idle-timer
 *** TODO `defcustom` for list of buffers-of-interest so `customize-set-variable` can do its thing

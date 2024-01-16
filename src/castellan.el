@@ -779,10 +779,22 @@ buffer will be updated."
   (interactive)
   (castellan--item-update "CANCELLED"))
 
+(defun castellan-refresh ()
+  "Refresh castellan buffers, but don't display them if not already shown."
+  (interactive)
+  (let* ((start-buffer (current-buffer))
+	 (activity-buffer (castellan--activity-refresh))
+	 (schedule-buffer (castellan--schedule-refresh)))
+    (switch-to-buffer start-buffer)
+    (when (or (equal start-buffer activity-buffer)
+	      (equal start-buffer schedule-buffer))
+      (castellan-find-first))))
+
 (defvar-keymap castellan-mode-map
   :doc "Keymap for castellan TODO management."
   "A"             #'castellan-set-activity
   "RET"           #'castellan-jump-to-item
+  "g"             #'castellan-refresh
   "?"             #'castellan--debug
   "+"             #'castellan-item-done
   "-"             #'castellan-item-todo

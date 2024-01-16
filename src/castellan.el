@@ -243,8 +243,15 @@ appropriate."
   (if (and (castellan--repeater item1)
 	   (not (castellan--repeater item2)))
       t
-    (time-less-p (datetime-to-time (castellan--schedule-datetime item1))
-		 (datetime-to-time (castellan--schedule-datetime item2)))))
+    (let* ((datetime1 (castellan--schedule-datetime item1))
+	   (datetime2 (castellan--schedule-datetime item2))
+	   ;; items w/o time last
+	   (datetime1-mod (if (datetime-has-time datetime1) datetime1
+			    (append '(0 0 25) (cdddr datetime1))))
+	   (datetime2-mod (if (datetime-has-time datetime2) datetime2
+			    (append '(0 0 25) (cdddr datetime2)))))
+	(time-less-p (datetime-to-time datetime1-mod)
+		     (datetime-to-time datetime2-mod)))))
 
 (defun weekdatetime-format (weekdatetime &optional format)
   (-let [(datetime weekspec) weekdatetime]
@@ -587,7 +594,9 @@ parts of the result."
 		       (indentation (make-string level ?>)))
 		 (format (concat "  %-" (format "%d" castellan-max-activity-length) "s  %-5s %9s %2s%s %s\n")
 			 activity
-			 (propertize (datetime-format scheduled "%H:%M") 'face 'castellan-scheduled-time)
+			 (if (datetime-has-time scheduled)
+			     (propertize (datetime-format scheduled "%H:%M") 'face 'castellan-scheduled-time)
+			   (propertize "--:--" 'face 'castellan-context-info))
 			 (castellan--propertize-todo-keyword todo-status)
 			 prio
 			 (propertize indentation 'face 'castellan-indentation)

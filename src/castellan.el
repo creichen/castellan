@@ -646,10 +646,12 @@ REQUIRED-TYPE, this function returns nil."
   (interactive)
   (-let [(&plist :pos (buffer filename position)) (castellan--info-at-point)]
     (when filename
-      (find-file filename)
-      (when position
-	(goto-char position)))
-    ))
+      ;;(find-file filename)
+      (let ((filebuf (find-file-noselect filename)))
+	(select-window (display-buffer filebuf))
+	(when position
+	  (goto-char position)))
+    )))
 
 (defmacro castellan--in-org-buffer (pos &rest body)
   "Execute BODY in buffer POS"

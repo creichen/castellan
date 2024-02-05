@@ -820,16 +820,38 @@ buffer will be updated."
 			       castellan-agenda-todos
 			       castellan-agenda-calendars)))
 
+(defun castellan--only-noncastellan-buffers-advice (orig-fun &rest args)
+  (unless (castellan--owned-buffer-p (current-buffer))
+    (apply orig-fun args)))
+
 (defun castellan--mode-setup ()
   (hl-line-mode 1)    ; Enable line highlighting
   (use-local-map castellan-mode-map)  ; Activate our keymap
+  ; prevent org-add-log-note from trying to access Castellan buffers
+  (unless
+      (advice-member-p #'castellan--only-noncastellan-buffers-advice 'org-add-log-note)
+    (advice-add 'org-add-log-note :around #'castellan--only-noncastellan-buffers-advice))
+  ; Auto revert setup
   (when castellan-agenda-auto-revert
     (dolist (buffer (castellan--all-org-buffers))
       (with-current-buffer buffer
 	(auto-revert-mode 1)))))
 
+(setq castellan--activity-agenda-buffer-name "*Castellan Activity TODO*")
+(setq castellan--schedule-agenda-buffer-name "*Castellan Scheduled TODO*")
+
 (defun castellan--activity-agenda-buffer ()
-  (get-buffer-create "*Castellan Activity TODO*"))
+  (get-buffer-create castellan--activity-agenda-buffer-name))
+
+(defun castellan--schedule-agenda-buffer ()
+  (get-buffer-create castellan--schedule-agenda-buffer-name))
+
+(defun castellan--owned-buffer-p (buf)
+  "Checks if BUF is one of the Castellan display buffers"
+  (let* ((b1 (get-buffer castellan--activity-agenda-buffer-name))
+	 (b2 (get-buffer castellan--schedule-agenda-buffer-name)))
+    (or (and b1 (equal b1 buf))
+	(and b2 (equal b2 buf)))))
 
 (defun castellan--activity-refresh ()
  (let ((buffer (castellan--activity-agenda-buffer)))
@@ -845,9 +867,6 @@ buffer will be updated."
 	      (sort items #'castellan--activity<)
 	      items)))))
    buffer))
-
-(defun castellan--schedule-agenda-buffer ()
-  (get-buffer-create "*Castellan Scheduled TODO*"))
 
 (defun castellan--schedule-refresh ()
  (let ((buffer (castellan--schedule-agenda-buffer)))

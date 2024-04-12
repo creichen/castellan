@@ -91,9 +91,14 @@ auto-generated and spammy.")
 		      :properties properties)
                 ))
 
+(defun castellan--all-agenda-todos ()
+  "All agenda files from castellan-agenda-todos plus castellan-agenda-inbox, if non-nil."
+    (append (when castellan-agenda-inbox (list castellan-agenda-inbox))
+	    castellan-agenda-todos)
+  )
+
 (defun castellan--get-all-org-items ()
-  (org-ql-select (append (when castellan-agenda-inbox (list castellan-agenda-inbox))
-			 castellan-agenda-todos)
+  (org-ql-select (castellan--all-agenda-todos)
     t
     :action #'castellan--org-ql-action))
 
@@ -367,11 +372,55 @@ parts of the result."
     (mapcar (lambda (p) (or (car p) (cadr p)))
 	    (-zip-lists result default))))
 
+
 (defun castellan--week-info (datetime)
   (when datetime
     (list
      (calendar-day-of-week (cdddr datetime))
      (calendar-iso-from-absolute datetime))))
+
+;; ================================================================================
+;; Automatic updating
+
+(defvar castellan-auto-update-idle-timer-delay 2
+  "Time in seconds after tracked file is updated before updating Castellan view.
+   Should be greater than zero to avoid spurious refreshes when synchronising files.")
+
+(setq castellan--auto-update-idle-refresh-timer nil)
+
+(defun castellan--auto-update-idle-refresh-run ()
+  (message "Timer runs!")
+  (castellan-refresh)
+  (setq castellan--auto-update-idle-refresh-timer nil))
+
+(defun castellan--auto-update-request-idle-refresh ()
+  (message "Maybe timer?")
+  (unless castellan--auto-update-idle-refresh-timer
+    (message "Yes timer!")
+    (setq castellan--auto-update-idle-refresh-timer
+	  (run-with-idle-timer castellan-auto-update-idle-timer-delay nil
+			       #'castellan--auto-update-idle-refresh-run)))
+  (message "Timer is timer %s" castellan--auto-update-idle-refresh-timer))
+
+(defun castellan--auto-update-check (&rest args)
+  "Callback for hooks that report updates on tracked org files."
+  (when (castellan--auto-update-track-current-buffer-p)
+    (message "Tracked file was updated: %s" (buffer-file-name))
+    (castellan--auto-update-request-idle-refresh)))
+
+(defun castellan--auto-update-track-current-buffer-p ()
+  "Checks if hte current buffer should be tracked for automatic updates"
+  (and (local-variable-p 'castellan--track-this-file)
+       castellan--track-this-file))
+
+(defun castellan--auto-update-setup ()
+  (add-hook 'after-revert-hook #'castellan--auto-update-check)
+  (add-hook 'after-change-functions #'castellan--auto-update-check)
+  ;; Iterate over all buffers-- implicitly tags for update tracking
+  (dolist (buf (castellan--all-org-buffers))))
+
+;; ================================================================================
+;; org item processing prior to visualisation
 
 (defun castellan--aggregate-org-items (items)
   (let ((last-file nil)
@@ -625,14 +674,19 @@ parts of the result."
 		   ;(get-text-property (point) 'castellan-id)
 )))
 
-
 (defun castellan--find-visiting-create (file-or-buf)
-  "Gets the buffer for a file, creating it if necessary"
-  (if (and (bufferp file-or-buf)
-	   (buffer-live-p file-or-buf))
-      file-or-buf
-    (or (find-buffer-visiting file-or-buf)
-	(find-file-noselect file-or-buf))))
+  "Gets the buffer for an org file, creating it if necessary.
+
+Marks the buffer for update tracking."
+  (-let [buf (if (and (bufferp file-or-buf)
+		      (buffer-live-p file-or-buf))
+		 file-or-buf
+	       (or (find-buffer-visiting file-or-buf)
+		   (find-file-noselect file-or-buf)))]
+    (with-current-buffer buf
+      (setq-local castellan--track-this-file t))
+    buf
+    ))
 
 (defun castellan--info-at-point (&optional required-type buf-point)
   "Returns the plist that describes the item or marker at point.
@@ -814,12 +868,14 @@ buffer will be updated."
   :keymap castellan-mode-map
   )
 
+(defun castellan--all-org-files ()
+  (append
+   (castellan--all-agenda-todos)
+   castellan-agenda-calendars))
+
 (defun castellan--all-org-buffers ()
-  (mapcar #'get-buffer-create (append
-			       (when castellan-agenda-inbox
-				 (list castellan-agenda-inbox))
-			       castellan-agenda-todos
-			       castellan-agenda-calendars)))
+  (mapcar #'castellan--find-visiting-create
+	  (castellan--all-org-files)))
 
 (defun castellan--only-noncastellan-buffers-advice (orig-fun &rest args)
   (unless (castellan--owned-buffer-p (current-buffer))
@@ -995,6 +1051,7 @@ If there is no such item, moves to the end of the buffer."
 (defun castellan ()
   "Shows both castellan TODO buffers and switch to the scheduled one."
   (interactive)
+  (castellan--auto-update-setup)
   (pop-to-buffer (castellan--activity-refresh))
   (pop-to-buffer (castellan--schedule-refresh))
   (castellan-find-first))

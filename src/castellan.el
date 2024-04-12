@@ -389,23 +389,18 @@ parts of the result."
 (setq castellan--auto-update-idle-refresh-timer nil)
 
 (defun castellan--auto-update-idle-refresh-run ()
-  (message "Timer runs!")
   (castellan-refresh)
   (setq castellan--auto-update-idle-refresh-timer nil))
 
 (defun castellan--auto-update-request-idle-refresh ()
-  (message "Maybe timer?")
   (unless castellan--auto-update-idle-refresh-timer
-    (message "Yes timer!")
     (setq castellan--auto-update-idle-refresh-timer
 	  (run-with-idle-timer castellan-auto-update-idle-timer-delay nil
-			       #'castellan--auto-update-idle-refresh-run)))
-  (message "Timer is timer %s" castellan--auto-update-idle-refresh-timer))
+			       #'castellan--auto-update-idle-refresh-run))))
 
 (defun castellan--auto-update-check (&rest args)
   "Callback for hooks that report updates on tracked org files."
   (when (castellan--auto-update-track-current-buffer-p)
-    (message "Tracked file was updated: %s" (buffer-file-name))
     (castellan--auto-update-request-idle-refresh)))
 
 (defun castellan--auto-update-track-current-buffer-p ()

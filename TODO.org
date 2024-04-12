@@ -20,7 +20,8 @@
 *** DONE "enter': jump to buffer in open window if present
 *** DONE TAB to with-temp-buffer-window show the entire entry
 CLOSED: [2024-04-12 Fr 11:23]
-*** TODO auto-rebuild after modifications, if idle, using after-revert-hook + after-change-functions and triggering run-with-idle-timer
+*** DONE auto-rebuild after modifications, if idle, using after-revert-hook + after-change-functions and triggering run-with-idle-timer
+CLOSED: [2024-04-12 Fr 14:03]
 *** TODO on rebuild, preserve location better
 *** TODO `defcustom` for list of buffers-of-interest so `customize-set-variable` can do its thing
 (defcustom castellan-... nil

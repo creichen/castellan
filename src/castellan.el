@@ -669,32 +669,6 @@ REQUIRED-TYPE, this function returns nil."
   (append (get-buffer-window-list (castellan--activity-agenda-buffer))
 	  (get-buffer-window-list (castellan--schedule-agenda-buffer))))
 
-;; ;; This version assumes that it needs to distinguish windows
-;;
-;; (defmacro castellan--update (&rest body)
-;;   "Execute body and then update the TODO buffer"
-;;   `(-let* ((windows (castellan--all-windows))
-;; 	   (old-buffer (current-buffer))
-;; 	   ;; remember where we were
-;; 	   (window-pos-alist (mapcar (lambda (window)
-;; 				       (-let [(&plist :castellan-id castellan-id)
-;; 					      (with-current-buffer (window-buffer window)
-;; 						(castellan--info-at-point nil (window-point window)))]
-;; 					 (cons window castellan-id)))
-;; 				     windows)))
-;;      ,@body
-;;      ;; recover position
-;;      (castellan--activity-refresh)
-;;      (castellan--schedule-refresh)
-;;      (dolist (window-castellan-id window-pos-alist)
-;;        (-let [(window . castellan-id) window-castellan-id]
-;; 	 (message "looking in [%s] for [%s]" window castellan-id)
-;; 	 (with-current-buffer  (window-buffer window)
-;; 	   (castellan--goto-id castellan-id)
-;; 	   (set-window-point window (point)))))
-;;      (switch-to-buffer old-buffer)
-;;      ))
-
 (defmacro castellan--update (refresh &rest body)
   "Execute BODY and then refresh the agenda buffers.
 

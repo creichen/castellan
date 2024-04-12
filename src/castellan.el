@@ -626,6 +626,13 @@ parts of the result."
 )))
 
 
+(defun castellan--find-visiting-create (file-or-buf)
+  "Gets the buffer for a file, creating it if necessary"
+  (if (and (bufferp file-or-buf)
+	   (buffer-live-p file-or-buf))
+      file-or-buf
+    (or (find-buffer-visiting file-or-buf)
+	(find-file-noselect file-or-buf))))
 
 (defun castellan--info-at-point (&optional required-type buf-point)
   "Returns the plist that describes the item or marker at point.
@@ -640,6 +647,26 @@ REQUIRED-TYPE, this function returns nil."
 	      (eq required-type type))
       prop)))
 
+(defun castellan-show-item ()
+  "Show the item at point in a temp buffer"
+  (interactive)
+  (-when-let* ((cinfo (castellan--info-at-point))
+	       ((&plist :pos (buffer filename position)) cinfo)
+	       (node-body (save-excursion
+			    (set-buffer (castellan--find-visiting-create filename))
+			    (goto-char position)
+			    (org-get-entry)))
+	       (temp-buffer (get-buffer-create "*Castellan Quick View*")))
+    (when (and filename position)
+      (with-temp-buffer-window temp-buffer
+	  nil
+	  nil
+	(with-current-buffer temp-buffer
+	  (insert node-body)
+	  (org-mode)
+	  (org-show-subtree)
+	  (org-cycle-hide-drawers 'all))
+	  ))))
 
 (defun castellan-jump-to-item ()
   "Jump to position of the TODO item at point."
@@ -699,7 +726,6 @@ buffer will be updated."
 	   )))
      (switch-to-buffer old-buffer)
      ))
-
 
 (defun castellan--goto-id (id)
   (interactive)
@@ -769,6 +795,7 @@ buffer will be updated."
 (defvar-keymap castellan-mode-map
   :doc "Keymap for castellan TODO management."
   "A"             #'castellan-set-activity
+  "<tab>"         #'castellan-show-item
   "RET"           #'castellan-jump-to-item
   "g"             #'castellan-refresh
   "?"             #'castellan--debug

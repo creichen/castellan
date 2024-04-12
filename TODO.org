@@ -18,6 +18,8 @@
 *** DONE agenda schedule: don't show time for items without a time
 *** DONE button for `re-generate current': "g"
 *** DONE "enter': jump to buffer in open window if present
+*** DONE TAB to with-temp-buffer-window show the entire entry
+CLOSED: [2024-04-12 Fr 11:23]
 *** TODO auto-rebuild after modifications, if idle, using after-revert-hook + after-change-functions and triggering run-with-idle-timer
 (defcustom castellan-... nil
   "comments
@@ -62,12 +64,10 @@
 
 ;; Call this function when we start
 (castellan--setup-tracked-buffers)
-
 *** TODO `defcustom` for list of buffers-of-interest so `customize-set-variable` can do its thing
-*** TODO 'magic' scheduled TODO items for activities that link to/update the activity agenda
 *** TODO todo-style "WAIT" and todo-style "DELEGATED" with names attached
 *** TODO bug: activity via "Activity | Hedline" misattributed to subsequent siblings, not just children
-*** TODO TAB to with-temp-buffer-window show the entire entry
+*** TODO 'magic' scheduled TODO items for activities that link to/update the activity agenda (e.g., "work on FUSE")
 *** TODO schedule: by week, day, or time.  Support notation like "W+1" and "Tue"; also allow unscheduling (+30m)
 *** TODO key to show path for current item (since not always visible in timeline view) (+5m)
 ** Task manager B

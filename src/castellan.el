@@ -776,7 +776,14 @@ buffer will be updated."
      (switch-to-buffer old-buffer)
      ))
 
+(defun castellan--id (&rest pos)
+  (-let [point (if pos
+		   (car pos)
+		 (point))]
+    (get-text-property point 'castellan-id)))
+
 (defun castellan--goto-id (id)
+  "Returns nil on failure, otherwise point"
   (interactive)
   (goto-char (point-min))
   (when id
@@ -785,12 +792,14 @@ buffer will be updated."
 	(if (equal id
 		   (get-text-property (point) 'castellan-id))
             (progn
-	      (setq found t)
-	      )
-	  (forward-line 1))
-	)
-      (unless found
-	(message "Item has disappeared")))))
+	      (setq found t))
+	  (forward-line 1)))
+      (if found
+	  (progn
+	    (point))
+	  ; else
+	(progn (message "Item has disappeared")
+	       nil)))))
 
 (defun castellan--item-update (mode)
   (interactive)
@@ -836,10 +845,10 @@ buffer will be updated."
   (let* ((start-buffer (current-buffer))
 	 (activity-buffer (castellan--activity-refresh))
 	 (schedule-buffer (castellan--schedule-refresh)))
-    (switch-to-buffer start-buffer)
-    (when (or (equal start-buffer activity-buffer)
-	      (equal start-buffer schedule-buffer))
-      (castellan-find-first))))
+    (switch-to-buffer start-buffer)))
+    ;; (when (or (equal start-buffer activity-buffer)
+    ;; 	      (equal start-buffer schedule-buffer))
+    ;;   (castellan-find-first))))
 
 (defvar-keymap castellan-mode-map
   :doc "Keymap for castellan TODO management."
@@ -905,9 +914,28 @@ buffer will be updated."
     (or (and b1 (equal b1 buf))
 	(and b2 (equal b2 buf)))))
 
+(defmacro castellan--save-excursion (buffer-expr &rest body)
+  `(-let* [(buffer ,buffer-expr)
+	   (old-buffer-point nil)
+	   (window-pos-map nil)]
+     (with-current-buffer buffer (progn
+       (setq old-buffer-point (point))
+       (dolist (window (get-buffer-window-list buffer nil nil))
+	 (push (cons window (list (castellan--id (window-point window))))
+	       window-pos-map))
+       ,@body
+       (dolist (window (get-buffer-window-list buffer nil nil))
+	 (-let* [((_ id) (assoc window window-pos-map))
+		 (pos (castellan--goto-id id))]
+	   (when (numberp pos)
+	     (set-window-point window pos))
+	   ))
+       (goto-char old-buffer-point))
+)))
+
 (defun castellan--activity-refresh ()
  (let ((buffer (castellan--activity-agenda-buffer)))
-   (with-current-buffer buffer
+   (castellan--save-excursion buffer
      (read-only-mode)
      (let ((inhibit-read-only t))
        (erase-buffer)
@@ -917,31 +945,34 @@ buffer will be updated."
 	 (castellan--insert-aggregate-items
 	  (if castellan-current-activity
 	      (sort items #'castellan--activity<)
-	      items)))))
+	    items)))))
    buffer))
 
 (defun castellan--schedule-refresh ()
- (let ((buffer (castellan--schedule-agenda-buffer)))
-   (with-current-buffer buffer
-     (read-only-mode)
-     (let ((inhibit-read-only t))
-       (erase-buffer)
-       (castellan--mode)
-       (castellan--insert-aggregate-scheduled-items
-	(sort
-	 (-filter
-	  #'castellan--scheduled-p
-	  (castellan--aggregate-org-items
-	   (append
-	    (castellan--get-all-calendar-items)
-	    (castellan--get-all-org-items)
-	   )))
-	 #'castellan--schedule<))))
-   buffer))
+  (let ((buffer (castellan--schedule-agenda-buffer)))
+    (castellan--save-excursion buffer
+       (read-only-mode)
+       (let ((inhibit-read-only t))
+	 (erase-buffer)
+	 (castellan--mode)
+	 (castellan--insert-aggregate-scheduled-items
+	  (sort
+	   (-filter
+	    #'castellan--scheduled-p
+	    (castellan--aggregate-org-items
+	     (append
+	      (castellan--get-all-calendar-items)
+	      (castellan--get-all-org-items)
+	      )))
+	   #'castellan--schedule<)))
+       (window--adjust-process-windows)
+   buffer)))
 
+;; ================================================================================
 ;; NASTY BUT APPARENTLY NECESSARY
+;; This completely disables org note-taking
 (defun org-add-log-note ())
-
+;; ================================================================================
 
 ; --------------------------------------------------------------------------------
 
@@ -1046,9 +1077,11 @@ If there is no such item, moves to the end of the buffer."
 (defun castellan ()
   "Shows both castellan TODO buffers and switch to the scheduled one."
   (interactive)
-  (castellan--auto-update-setup)
-  (pop-to-buffer (castellan--activity-refresh))
-  (pop-to-buffer (castellan--schedule-refresh))
-  (castellan-find-first))
+  (-let [already-had-schedule-buffer  (get-buffer castellan--schedule-agenda-buffer-name)]
+    (castellan--auto-update-setup)
+    (pop-to-buffer (castellan--activity-refresh))
+    (pop-to-buffer (castellan--schedule-refresh))
+    (unless already-had-schedule-buffer
+      (castellan-find-first))))
 
 (provide 'castellan)

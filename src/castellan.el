@@ -658,7 +658,7 @@ REQUIRED-TYPE, this function returns nil."
   `(-let [(buffer filename position) pos]
      (with-current-buffer (or (and (buffer-live-p buffer)
 				   buffer)
-			      (find-file filename))
+			      (castellan--find-visiting-create filename))
        (goto-char position)
        ,@body
        )

@@ -24,7 +24,8 @@ CLOSED: [2024-04-12 Fr 11:23]
 CLOSED: [2024-04-12 Fr 14:03]
 *** DONE on rebuild, preserve location better
 CLOSED: [2024-04-12 Fr 16:29]
-*** TODO `defcustom` for list of buffers-of-interest so `customize-set-variable` can do its thing
+*** DONE `defcustom` for list of buffers-of-interest so `customize-set-variable` can do its thing
+CLOSED: [2024-04-12 Fr 17:14]
 (defcustom castellan-... nil
   "comments
   :type '(repeat string)
@@ -36,6 +37,7 @@ CLOSED: [2024-04-12 Fr 16:29]
 *** TODO schedule: by week, day, or time.  Support notation like "W+1" and "Tue"; also allow unscheduling (+30m)
 *** TODO key to show path for current item (since not always visible in timeline view) (+5m)
 ** Task manager B
+*** TODO support for archiving
 *** TODO don't hardcode todo-styles
 *** TODO new items (into INBOX or at point, for task buffer)
 *** TODO new items (at week/date and into INBOX, for date buffer)

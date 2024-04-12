@@ -48,19 +48,39 @@
 ;(require 'benchmark)
 ;(benchmark-elapse (org-ql-select (org-agenda-files)
 
-(defvar castellan-agenda-inbox nil
-  "Name of a buffer that stores the org TODO inbox")
-(defvar castellan-agenda-todos nil
-  "List of names of files that contain TODO items")
-(defvar castellan-agenda-calendars nil
+(defgroup castellan nil
+  "Customization group for the 'castellan' package."
+  :prefix "castellan-"
+  :group 'applications)
+
+(defcustom castellan-agenda-inbox nil
+  "Name of a buffer that stores the org TODO inbox"
+  :type 'string
+  ;; :set setter-function
+  :group 'castellan)
+
+(defcustom castellan-agenda-todos nil
+  "List of names of files that contain TODO items"
+  :type '(repeat string)
+  ;; :set setter-function
+  :group 'castellan)
+
+(defcustom castellan-agenda-calendars nil
   "List of names of files that contain calendar items.
 
 Items in these files won't show up in the (regular) TODO, only in
 the Scheduled TODO.  Intended for schedules that might be
-auto-generated and spammy.")
+auto-generated and spammy."
+  :type '(repeat string)
+  ;; :set setter-function
+  :group 'castellan)
 
-(defvar castellan-max-activity-length 8
-  "Maximum string length to allow for activity names")
+
+(defcustom castellan-max-activity-length 8
+  "Maximum string length to allow for activity names"
+  :type 'number
+  ;; :set setter-function
+  :group 'castellan)
 
 (defvar castellan-current-activity nil
   "Current castellan activity, or nil.")
@@ -382,9 +402,11 @@ parts of the result."
 ;; ================================================================================
 ;; Automatic updating
 
-(defvar castellan-auto-update-idle-timer-delay 2
+(defcustom castellan-auto-update-idle-timer-delay 2
   "Time in seconds after tracked file is updated before updating Castellan view.
-   Should be greater than zero to avoid spurious refreshes when synchronising files.")
+   Should be greater than zero to avoid spurious refreshes when synchronising files."
+  :type 'number
+  :group 'castellan)
 
 (setq castellan--auto-update-idle-refresh-timer nil)
 
@@ -651,11 +673,6 @@ parts of the result."
 			      'castellan-id castellan-id)))
 	))))
 
-(defgroup castellan nil
-  "Customization group for the 'castellan' package."
-  :prefix "castellan-"
-  :group 'applications)
-
 (defun castellan--extract-prefix-number (prefix str)
   "Extract number from STR if it starts with PREFIX and is followed by '<number>'."
   (when (string-match (concat prefix "\\([0-9]+\\)") str)
@@ -916,6 +933,7 @@ buffer will be updated."
 
 (defmacro castellan--save-excursion (buffer-expr &rest body)
   `(-let* [(buffer ,buffer-expr)
+	   (result nil)
 	   (old-buffer-point nil)
 	   (window-pos-map nil)]
      (with-current-buffer buffer (progn
@@ -930,8 +948,7 @@ buffer will be updated."
 	   (when (numberp pos)
 	     (set-window-point window pos))
 	   ))
-       (goto-char old-buffer-point))
-)))
+       (goto-char old-buffer-point)))))
 
 (defun castellan--activity-refresh ()
  (let ((buffer (castellan--activity-agenda-buffer)))
@@ -965,8 +982,8 @@ buffer will be updated."
 	      (castellan--get-all-org-items)
 	      )))
 	   #'castellan--schedule<)))
-       (window--adjust-process-windows)
-   buffer)))
+       (window--adjust-process-windows))
+    buffer))
 
 ;; ================================================================================
 ;; NASTY BUT APPARENTLY NECESSARY

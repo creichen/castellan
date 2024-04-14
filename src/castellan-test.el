@@ -70,15 +70,22 @@
 
 (defun harness--unparse-agenda (s-expr &optional level)
   "Unparse an S-expression S-EXPR into org-mode content in the current buffer."
-  (unless level (setq level 1))
-  (insert (format "%s" (make-string level ?*)))
-  (dolist (item s-expr)
-    (if (symbolp item)
-	(insert (format " %s" item))))
-  (insert "\n")
-  (dolist (item s-expr)
-    (if (listp item)
-        (harness--unparse-agenda item (1+ level)))))
+  (-let [at-root (null level)]
+    (when at-root (setq level 1))
+    (if (and at-root
+	     (stringp s-expr))
+	;; top-level string?  Print directly and finish
+	(insert s-expr)
+      ;; else
+      (progn
+	(insert (format "%s" (make-string level ?*)))
+	(dolist (item s-expr)
+	  (if (symbolp item)
+	      (insert (format " %s" item))))
+	(insert "\n")
+	(dolist (item s-expr)
+	  (if (listp item)
+              (harness--unparse-agenda item (1+ level))))))))
 
 (defun harness--buffer-name (buf-sym)
   "Map a symbol to the corresponding test buffer name"
@@ -93,9 +100,10 @@ SPEC takes a number of keyword parameters:
 - :todos BUFFERS is a list of buffer specs for agenda todo buffers
 
 BUFFERS are an alist of the form ((ID BODY) ... (ID BODY)), where
-ID is a symbol that identifies the buffer and BODY is an
-S-expression that defines the buffer contents, such
-as (headline (TODO task-item) (DONE done-item) (subheading))."
+ID is a symbol that identifies the buffer and BODY is either
+a string containing verbatim buffer contents or an S-expression that
+defines the buffer contents, such as
+(headline (TODO task-item) (DONE done-item) (subheading))."
   (-let [(&plist :run commands :todos todo-buffers) spec]
     `(progn
        (setq harness--test-buffers-alist nil)
@@ -145,7 +153,6 @@ References are lists of the form (BUFFER-ID HEADING SUBHEADING ...)."
   (with-current-buffer (alist-get (car org-node-ref) harness--test-buffers-alist)
     (harness--get-org-node-recursively (org-element-parse-buffer) (cdr org-node-ref))))
 
-
 (defun harness-parsed-buffers (&optional buffers)
   "Parses active test buffers into the buffer spec format used by `harness-run-with-buffers'.
 
@@ -159,9 +166,21 @@ otherwise all buffers are parsed again."
 	   harness--test-buffers-alist)))
     (harness--parse-agenda proper-buffers)))
 
+(defun harness-filter-items (items props &rest predicate)
+  "Given list of plists ITEMS, compute list of lists of PROPS for each item.
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; Tests for test harness
+If PREDICATE is non-nil, only return elements E for which (PREDICATE E)
+returns non-nil."
+  (-let [result nil]
+    (dolist (item items)
+      (when (or (null predicate)
+		(apply (car predicate) (list (cdr item))))
+	(push (mapcar (lambda (p) (plist-get (cdr item) p)) props)
+	      result)))
+    (reverse result)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Tests for test harness
 
 (ert-deftest test-harness ()
   "Validate test harness"
@@ -184,6 +203,24 @@ otherwise all buffers are parsed again."
 	      (B (quux)))
 	    (harness-parsed-buffers)))
    ))
+
+(ert-deftest test-harness-filter-items ()
+  "Validate harness-filter-items"
+  (should (equal '((1 2)
+		   (nil "foo"))
+		 (harness-filter-items '((ITEM :c 1 :b 2 :a 1)
+					 (ITEM :b "foo"))
+				       '(:a :b))))
+  (should (equal '((3 2)
+		   (nil "bar"))
+		 (harness-filter-items '((ITEM :c 1 :b 2 :a 3)
+					 (ITEM :c 2 :b "bar")
+					 (ITEM :b "foo"))
+				       '(:a :b)
+				       (lambda (e) (plist-get e :c))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Tests for datetime processing
 
 (ert-deftest test-parse-weekspec ()
   "Validate week and weekday parsing"
@@ -223,6 +260,78 @@ otherwise all buffers are parsed again."
     (should (equal "2023 52"
 		   (castellan--weekspec-format '(2022 52 7 0) "%Y %V")))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Tests for specification parsing
+
+(ert-deftest test-parse-activity-label ()
+  "Basic activity label parsing"
+  (harness-run-with-buffers
+   :todos '((A "
+* title-0
+** TODO todo-0
+* TODO top-0
+* ACT1 | title-1
+** TODO todo-ACT1-foo
+*** TODO ACT3 | todo-ACT3-subact
+** TODO todo-ACT1-bar
+** TODO todo-ACT1-quux
+* TODO top-2
+* title-2
+** TODO todo-2
+* TODO ACT2 | top-3"))
+   :run (
+	 (should (equal '(
+			  ;; debug: who sets activity away from nil?
+			  ;; idea 1: remember level at which activity was introduced, if current activity from same level, null first
+			  ;;  (except we're already nulling first?)
+			  (2 "todo-0" todo nil)
+			  (1 "top-0" todo nil)
+			  (2 "todo-ACT1-foo" todo "ACT1")
+			  (3 "todo-ACT3-subact" todo "ACT3")
+			  (2 "todo-ACT1-bar" todo "ACT1")
+			  (2 "todo-ACT1-quux" todo "ACT1")
+			  (1 "top-2" todo nil)
+			  (2 "todo-2" todo nil)
+			  (1 "top-3" todo "ACT2")
+			  )
+			(harness-filter-items (castellan--activity-items)
+					      '(:level :headline :todo-type :activity))
+			)))))
+
+
+(ert-deftest test-parse-inferred-weekspec ()
+  "Basic activity label parsing"
+  (harness-run-with-buffers
+   :todos '((A "
+* #2024
+** # W01
+*** ## Mon
+**** TODO =10:00 | start
+**** TODO =11:00 | foo
+*** ## Tue
+**** TODO =12:00 | bar
+"))
+   :run (
+	 (should (equal '(
+			  ;; debug: who sets activity away from nil?
+			  ;; idea 1: remember level at which activity was introduced, if current activity from same level, null first
+			  ;;  (except we're already nulling first?)
+			  ("start"
+			   ((0 0 10 nil nil nil nil -1 nil)
+			    (2024 1 1 1)))
+			  ("foo"
+			   ((0 0 11 nil nil nil nil -1 nil)
+			    (2024 1 1 1)))
+			  ("bar"
+			   ((0 0 12 nil nil nil nil -1 nil)
+			    (2024 1 2 2)))
+			  )
+			(harness-filter-items (castellan--activity-items)
+					      '(:headline :scheduled))
+			)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Tests for basic operations
 
 (ert-deftest test-todo-to-done ()
   "Marking TODO as DONE should work"
@@ -237,3 +346,4 @@ otherwise all buffers are parsed again."
 		  '((A (DONE bar)))
 		  (harness-parsed-buffers)))
    )))
+

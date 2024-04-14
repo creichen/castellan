@@ -31,9 +31,11 @@ CLOSED: [2024-04-12 Fr 17:14]
   :type '(repeat string)
   :set #castellan--set-update-buf
   :group castellan)
+*** DONE bug: activity via "Activity | Hedline" misattributed to subsequent siblings, not just children
+CLOSED: [2024-04-14 So 20:43]
 *** TODO todo-style "WAIT" and todo-style "DELEGATED" with names attached
-*** TODO bug: activity via "Activity | Hedline" misattributed to subsequent siblings, not just children
 *** TODO 'magic' scheduled TODO items for activities that link to/update the activity agenda (e.g., "work on FUSE")
+*** TODO re-add comments, optionally (advice around org-note?)
 *** TODO schedule: by week, day, or time.  Support notation like "W+1" and "Tue"; also allow unscheduling (+30m)
 *** TODO key to show path for current item (since not always visible in timeline view) (+5m)
 ** Task manager B

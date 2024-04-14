@@ -443,11 +443,10 @@ parts of the result."
   (let ((last-file nil)
 	(last-buffer nil)
 	(last-level 0)
-	(activity nil)
 	(prefixes nil)
-	(activities-stack nil)
-	(weekspec-stack nil)
-	(weekspec nil)
+	(ctx-stack '(:activity nil :weekspec nil))
+	(ctx-weekspec nil)
+	(ctx-activity nil)
 	(last-headline nil)
 	(marker-pos nil)
 	(last-pos nil)
@@ -471,7 +470,7 @@ parts of the result."
 	      ((&alist "SCHEDULED" scheduled) properties)
 	      (headline (castellan--headline-get unsplit-headline))
 	      (activity-or-time-string (castellan--headline-get-activity-or-time-string unsplit-headline properties))
-	      (new-activity (when (eq 'activity (car activity-or-time-string))
+	      (new-ctx-activity (when (eq 'activity (car activity-or-time-string))
 			      (cdr activity-or-time-string)))
 	      (scheduled-timespec (when (eq 'time-string (car activity-or-time-string))
 				    (cdr activity-or-time-string))))
@@ -489,50 +488,62 @@ parts of the result."
 	  (setq last-file file)
 	  (setq last-buffer buffer)
 	  (setq last-level 0)
-	  (setq activity nil)
+
+	  (setq ctx-activity nil)
+	  (setq ctx-weekspec nil)
+	  (setq ctx-stack '(:activity nil :weekspec nil))
+
 	  (setq prefixes nil)
-	  (setq weekspec nil)
 	  (setq marker-pos (list buffer file position))
-	  (setq weekspec-stack nil)
 	  (setq last-headline (if file
 				  (castellan--org-file-strip file)
 				"<no-file-name>")))
-	(while (> last-level level)
+	(cond
+	 ((= last-level level)
+	  ;; same level
+	  (progn
+	    (-let [(:activity a :weekspec ws) (car ctx-stack)]
+	      (setq ctx-activity a)
+	      (setq ctx-weekspec ws))))
+	 ((> last-level level)
 	  ;; level down
-	  (setq last-level (- last-level 1))
-	  (setq activity (pop activities-stack))
-	  (setq weekspec (pop weekspec-stack))
-	  (pop prefixes)
-	  )
-	(while (< last-level level)
+	  (while (> last-level level)
+	    (setq last-level (- last-level 1))
+	    (pop ctx-stack)
+	    (-let [(:activity a :weekspec ws) (car ctx-stack)]
+	      (setq ctx-activity a)
+	      (setq ctx-weekspec ws))
+	    (pop prefixes)))
+	 ((< last-level level)
 	  ;; level up
-	  (setq last-level (+ last-level 1))
-	  (push activity activities-stack)
-	  (push last-headline prefixes)
-	  (push weekspec weekspec-stack)
-	  (setq last-headline nil)
-	  )
+	  (while (< last-level level)
+	    (setq last-level (+ last-level 1))
+	    (push (list :activity ctx-activity
+			:weekspec ctx-weekspec)
+		  ctx-stack)
+	    (push last-headline prefixes)
+	    (setq last-headline nil))))
 
-	(when new-activity
-	  (unless (or (equal new-activity activity)
-		      (member new-activity castellan-all-activities))
-	    (push new-activity castellan-all-activities))
-	  (setq activity new-activity))
-	(setq weekspec
-	      (castellan--parse-week headline weekspec))
+	(when new-ctx-activity
+	  (unless (or (equal new-ctx-activity ctx-activity)
+		      (member new-ctx-activity castellan-all-activities))
+	    (push new-ctx-activity castellan-all-activities))
+	  (setq ctx-activity new-ctx-activity))
+	(setq ctx-weekspec
+	      (castellan--parse-week headline ctx-weekspec))
 
 	(setq last-headline headline)
 	;; produce output:
 	(let* ((castellan-id (cons headline prefixes))
-	       (marker (cons 'MARKER (list :castellan-id prefixes :activity activity :level level :pos marker-pos :path prefixes))))
+	       (marker (cons 'MARKER (list :castellan-id prefixes :activity ctx-activity :level level :pos marker-pos :path prefixes))))
 	  (if todo-status
 	      (progn
 		(push (cons 'ITEM (list :castellan-id castellan-id :headline headline
-					:scheduled (list scheduled weekspec)
+					:scheduled (list scheduled ctx-weekspec)
 					:todo-type todo-type ; 'todo or ...
 					:todo-status todo-status
 					:priority priority
-					:activity activity
+					:activity ctx-activity
 					:level level
 					:pos (list buffer file position)
 					:properties properties
@@ -951,21 +962,27 @@ buffer will be updated."
        (goto-char old-buffer-point)))))
 
 (defun castellan--activity-refresh ()
+  "Update activity agenda with recomputed activity items"
  (let ((buffer (castellan--activity-agenda-buffer)))
    (castellan--save-excursion buffer
      (read-only-mode)
      (let ((inhibit-read-only t))
        (erase-buffer)
        (castellan--mode)
-       (let ((items (castellan--aggregate-org-items
-		     (castellan--get-all-org-items))))
-	 (castellan--insert-aggregate-items
-	  (if castellan-current-activity
-	      (sort items #'castellan--activity<)
-	    items)))))
+       (castellan--insert-aggregate-items
+	(castellan--activity-items))))
    buffer))
 
+(defun castellan--activity-items ()
+  "Sorted items for the activity agenda"
+  (let ((items (castellan--aggregate-org-items
+		(castellan--get-all-org-items))))
+    (if castellan-current-activity
+	(sort items #'castellan--activity<)
+      items)))
+
 (defun castellan--schedule-refresh ()
+  "Update schedule agenda with recomputed schedule items"
   (let ((buffer (castellan--schedule-agenda-buffer)))
     (castellan--save-excursion buffer
        (read-only-mode)
@@ -973,17 +990,21 @@ buffer will be updated."
 	 (erase-buffer)
 	 (castellan--mode)
 	 (castellan--insert-aggregate-scheduled-items
-	  (sort
-	   (-filter
-	    #'castellan--scheduled-p
-	    (castellan--aggregate-org-items
-	     (append
-	      (castellan--get-all-calendar-items)
-	      (castellan--get-all-org-items)
-	      )))
-	   #'castellan--schedule<)))
+	  (castellan--schedule-items)))
        (window--adjust-process-windows))
     buffer))
+
+(defun castellan--schedule-items ()
+  "Sorted items for the schedule agenda"
+  (sort
+   (-filter
+    #'castellan--scheduled-p
+    (castellan--aggregate-org-items
+     (append
+      (castellan--get-all-calendar-items)
+      (castellan--get-all-org-items)
+      )))
+   #'castellan--schedule<))
 
 ;; ================================================================================
 ;; NASTY BUT APPARENTLY NECESSARY

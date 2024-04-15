@@ -724,26 +724,43 @@ REQUIRED-TYPE, this function returns nil."
 	      (eq required-type type))
       prop)))
 
+(defconst castellan--quick-view-buffer-name "*Castellan Quick View*"
+  "Quick-view buffer for Castellan")
+
+(defvar castellan--current-quick-view-item nil
+  "Curent quick view item")
+
 (defun castellan-show-item ()
   "Show the item at point in a temp buffer"
   (interactive)
-  (-when-let* ((cinfo (castellan--info-at-point))
+  (-if-let* ((cinfo (castellan--info-at-point))
 	       ((&plist :pos (buffer filename position)) cinfo)
 	       (node-body (save-excursion
 			    (set-buffer (castellan--find-visiting-create filename))
 			    (goto-char position)
 			    (org-get-entry)))
-	       (temp-buffer (get-buffer-create "*Castellan Quick View*")))
-    (when (and filename position)
-      (with-temp-buffer-window temp-buffer
-	  nil
-	  nil
-	(with-current-buffer temp-buffer
-	  (insert node-body)
-	  (org-mode)
-	  (org-show-subtree)
-	  (org-cycle-hide-drawers 'all))
-	  ))))
+	       (_ filename)
+	       (_ position)
+	       (_ (not (eq cinfo castellan--current-quick-view-item)))
+	       (temp-buffer (get-buffer-create castellan--quick-view-buffer-name)))
+      (progn
+	(setq castellan--current-quick-view-item cinfo)
+	(with-temp-buffer-window temp-buffer
+	    nil
+	    nil
+	  (with-current-buffer temp-buffer
+	    (insert node-body)
+	    (org-mode)
+	    ;; make configurable?
+	    (local-set-key (kbd "q") #'kill-buffer-and-window)
+	    (add-hook 'kill-buffer-hook (lambda ()
+					  (setq castellan--current-quick-view-item nil)))
+	    (org-show-subtree)
+	    (org-cycle-hide-drawers 'all))))
+    ;; else close the info window
+    (-when-let (window (get-buffer-window castellan--quick-view-buffer-name))
+      (setq castellan--current-quick-view-item nil)
+      (delete-window window))))
 
 (defun castellan-jump-to-item ()
   "Jump to position of the TODO item at point."
@@ -926,8 +943,10 @@ buffer will be updated."
       (with-current-buffer buffer
 	(auto-revert-mode 1)))))
 
-(setq castellan--activity-agenda-buffer-name "*Castellan Activity TODO*")
-(setq castellan--schedule-agenda-buffer-name "*Castellan Scheduled TODO*")
+(defconst castellan--activity-agenda-buffer-name "*Castellan Activity TODO*"
+  "Castellan buffer name for the activity agenda.")
+(defconst castellan--schedule-agenda-buffer-name "*Castellan Scheduled TODO*"
+  "Castellan buffer name for the schedule agenda.")
 
 (defun castellan--activity-agenda-buffer ()
   (get-buffer-create castellan--activity-agenda-buffer-name))

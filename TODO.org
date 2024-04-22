@@ -19,18 +19,46 @@
 *** DONE button for `re-generate current': "g"
 *** DONE "enter': jump to buffer in open window if present
 *** DONE TAB to with-temp-buffer-window show the entire entry
-CLOSED: [2024-04-12 Fr 11:23]
+
+*** TODO fix mis-sorted entries
+
+#+BEGIN_SRC org
+ One org file:
+ * Local Calendar
+ ** TODO Activity
+  SCHEDULED: <2024-04-22 Mon 13:00-15:45>
+  :PROPERTIES:
+  :CALEVENT-UID: abcde
+  :FIRST-START: 2022-12-05T13:00
+  :FIRST-END: 2022-12-05T15:45
+  :END:
+ * Holidays
+ ** TODO St. George's Day
+  SCHEDULED: <2024-04-23 Tue 00:00>
+  :PROPERTIES:
+  :CALEVENT-UID: 20240423_14nd09osfel9a81vn3n47c8m0c@google.com
+  :END:
+
+ Another org file:
+ #+STARTUP: content
+
+ * Calendar
+:properties:
+  :QUICKSCHEDULE: t
+  :CALTYPE: meta
+:END:
+ * #2024
+ ** # W17
+ *** ## Mon
+ **** TODO some TODO
+#+END_SRC
+
 *** DONE auto-rebuild after modifications, if idle, using after-revert-hook + after-change-functions and triggering run-with-idle-timer
 CLOSED: [2024-04-12 Fr 14:03]
 *** DONE on rebuild, preserve location better
 CLOSED: [2024-04-12 Fr 16:29]
 *** DONE `defcustom` for list of buffers-of-interest so `customize-set-variable` can do its thing
 CLOSED: [2024-04-12 Fr 17:14]
-(defcustom castellan-... nil
-  "comments
-  :type '(repeat string)
-  :set #castellan--set-update-buf
-  :group castellan)
 *** DONE bug: activity via "Activity | Hedline" misattributed to subsequent siblings, not just children
 CLOSED: [2024-04-14 So 20:43]
 *** TODO todo-style "WAIT" and todo-style "DELEGATED" with names attached

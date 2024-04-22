@@ -260,6 +260,21 @@ returns non-nil."
     (should (equal "2023 52"
 		   (castellan--weekspec-format '(2022 52 7 0) "%Y %V")))))
 
+(ert-deftest test-headline-split ()
+  "tests castellan--headline-split"
+  (should (equal '(:activity nil :time nil :duration nil :headline "foo bar")
+		 (castellan--headline-split "foo bar")))
+  (should (equal '(:activity nil :time "11:00" :duration nil :headline "foo")
+		 (castellan--headline-split "=11:00 | foo")))
+  (should (equal '(:activity "topic" :time nil :duration nil :headline "foo")
+		 (castellan--headline-split "topic | foo")))
+  (should (equal '(:activity "topic" :time nil :duration nil :headline "foo")
+		 (castellan--headline-split "topic|foo")))
+  (should (equal '(:activity "topic" :time nil :duration nil :headline "foo")
+		 (castellan--headline-split " topic |        foo")))
+  (should (equal '(:activity "topic" :time "13:00" :duration "1m" :headline "foo")
+		 (castellan--headline-split "=13:00+1m| topic |        foo"))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests for specification parsing
 
@@ -307,7 +322,7 @@ returns non-nil."
 ** # W01
 *** ## Mon
 **** TODO =10:00 | start
-**** TODO =11:00 | foo
+**** TODO =11:00+5m | foo
 *** ## Tue
 **** TODO =12:00 | bar
 "))

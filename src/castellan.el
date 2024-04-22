@@ -152,23 +152,30 @@ auto-generated and spammy."
 	       :action #'castellan--org-ql-action)
 	     )))
 
-(defun castellan--headline-get-activity-or-time-string (headline properties)
-  "Given a HEADLINE with a '|', extract the activity or time string
-from the bar's lhs.
+(defun castellan--headline-split (headline)
+  "Given a HEADLINE, extract prefix annotations for time and activity.
 
-Returns NIL if not present, otherwise a pair whose car is
-'activity or 'time-string."
-  (let ((act (or (alist-get "AGENDA-GROUP" properties nil nil #'string=)
-		 (if (string-prefix-p "=" headline) ;; quick-schedule annotations
-		     (cons 'time-string (substring headline 1))
-		   (let ((split (string-split headline "|")))
-		     (when (cdr split)
-		       (string-clean-whitespace (car split))))))))
-    (if (stringp act)
-      (cons 'activity (substring act 0 (min castellan-max-activity-length
-					    (length act))))
-      ;; else: time string
-      act)))
+A headline may have the form \"=TIME+DURATION | TOPIC | PROPER-HEADLINE\".
+with either or both of =TIME+DURATION| and TOPIC| parts omitted.  This
+function splits the headline string into a plist with properties :time, :duration, :activity, and :topic."
+  (-let* ((splits (string-split headline "|"))
+	  (time-duration-spec (-when-let* (((maybe-td-spec . splits-rest) splits)
+					   (_ splits-rest)
+					   (_ (string-prefix-p "=" maybe-td-spec)))
+				(setq splits splits-rest)
+				(string-clean-whitespace (substring maybe-td-spec 1))))
+	  (activity-spec (-when-let* (((maybe-activity-spec . splits-rest) splits)
+				      (_ splits-rest))
+			   (setq splits splits-rest)
+			   (string-clean-whitespace maybe-activity-spec)))
+	  ((time-spec duration-spec) (when time-duration-spec
+				       (string-split time-duration-spec "+")))
+	  (new-headline (string-clean-whitespace (mapconcat 'identity splits "|"))))
+    (list :activity activity-spec
+	  :time time-spec
+	  :duration duration-spec
+	  :headline new-headline)))
+
 
 (defun castellan--activity< (item1 item2)
   (let* ((act1 (castellan--activity item1))
@@ -468,12 +475,14 @@ parts of the result."
 				      :repeater-value schedule-repeater-value))
 		       :raw-value unsplit-headline) headline-props)
 	      ((&alist "SCHEDULED" scheduled) properties)
-	      (headline (castellan--headline-get unsplit-headline))
-	      (activity-or-time-string (castellan--headline-get-activity-or-time-string unsplit-headline properties))
-	      (new-ctx-activity (when (eq 'activity (car activity-or-time-string))
-			      (cdr activity-or-time-string)))
-	      (scheduled-timespec (when (eq 'time-string (car activity-or-time-string))
-				    (cdr activity-or-time-string))))
+	      ;(headline (castellan--headline-get unsplit-headline))
+	      ((&plist :time scheduled-timespec
+		       :duration scheduled-duration
+		       :activity new-ctx-activity
+		       :headline headline)
+	       (castellan--headline-split unsplit-headline))
+	      (new-ctx-activity (or new-ctx-activity
+				    (alist-get "AGENDA-GROUP" properties nil nil #'string=))))
 	(when scheduled
 	  (setq scheduled
 		(org-parse-time-string scheduled t)))

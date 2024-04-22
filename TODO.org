@@ -20,6 +20,7 @@
 *** DONE "enter': jump to buffer in open window if present
 *** DONE TAB to with-temp-buffer-window show the entire entry
 
+*** TODO Not parsing time specs any more?
 *** TODO fix mis-sorted entries
 
 #+BEGIN_SRC org

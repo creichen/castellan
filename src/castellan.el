@@ -279,9 +279,9 @@ appropriate."
 	   (datetime2 (castellan--schedule-datetime item2))
 	   ;; items w/o time last
 	   (datetime1-mod (if (datetime-has-time datetime1) datetime1
-			    (append '(0 0 25) (cdddr datetime1))))
+			    (append '(0 0 0) (cdddr datetime1))))
 	   (datetime2-mod (if (datetime-has-time datetime2) datetime2
-			    (append '(0 0 25) (cdddr datetime2)))))
+			    (append '(0 0 0) (cdddr datetime2)))))
 	(time-less-p (datetime-to-time datetime1-mod)
 		     (datetime-to-time datetime2-mod)))))
 

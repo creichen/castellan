@@ -483,15 +483,27 @@ parts of the result."
 	       (castellan--headline-split unsplit-headline))
 	      (new-ctx-activity (or new-ctx-activity
 				    (alist-get "AGENDA-GROUP" properties nil nil #'string=))))
+
+	;; Internally scheduled: parse
 	(when scheduled
 	  (setq scheduled
 		(org-parse-time-string scheduled t)))
+
+	;; Not scheduled explicitly but we have a week spec: sync
+	(when (and (not scheduled)
+		   (castellan--weekspec-complete-p ctx-weekspec))
+	  (setq scheduled
+		(castellan--weekspec-to-datetime ctx-weekspec)))
+
+	;; Explicit timespec in headline: merge/override the old spec
 	(when scheduled-timespec
 	  (setq scheduled
 		(datetime-parse-time scheduled-timespec scheduled))
-	  (unless (or (datetime-has-date scheduled)
-		      (datetime-has-time scheduled))
-	    (setq scheduled nil)))
+	  ;; (unless (or (datetime-has-date scheduled)
+	  ;; 	      (datetime-has-time scheduled))
+	  ;;   (setq scheduled nil))
+	  )
+
 	(when (not (and (string= file last-file)
 			(eq buffer last-buffer)))
 	  (setq last-file file)

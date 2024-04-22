@@ -332,14 +332,48 @@ returns non-nil."
 			  ;; idea 1: remember level at which activity was introduced, if current activity from same level, null first
 			  ;;  (except we're already nulling first?)
 			  ("start"
-			   ((0 0 10 nil nil nil nil -1 nil)
+			   ((0 0 10 1 1 2024 1 -1 nil)
 			    (2024 1 1 1)))
 			  ("foo"
-			   ((0 0 11 nil nil nil nil -1 nil)
+			   ((0 0 11 1 1 2024 1 -1 nil)
 			    (2024 1 1 1)))
 			  ("bar"
-			   ((0 0 12 nil nil nil nil -1 nil)
+			   ((0 0 12 2 1 2024 2 -1 nil)
 			    (2024 1 2 2)))
+			  )
+			(harness-filter-items (castellan--activity-items)
+					      '(:headline :scheduled))
+			)))))
+
+(ert-deftest test-parse-inferred-weekspec-gap ()
+  "Basic activity label parsing, with a gap"
+  (harness-run-with-buffers
+   :todos '((A "
+* #2024
+** # W01
+*** ## Mon
+**** TODO =10:00 | start
+**** TODO notime1
+**** TODO notime2
+**** TODO =11:00+5m | foo
+"))
+   :run (
+	 (should (equal '(
+			  ;; debug: who sets activity away from nil?
+			  ;; idea 1: remember level at which activity was introduced, if current activity from same level, null first
+			  ;;  (except we're already nulling first?)
+			  ("start"
+			   ((0 0 10 1 1 2024 1 -1 nil)
+			    (2024 1 1 1)))
+			  ("notime1"
+			   ((nil nil nil 1 1 2024 1 nil nil)
+			    (2024 1 1 1)))
+			  ("notime2"
+			   ((nil nil nil 1 1 2024 1 nil nil)
+			    (2024 1 1 1)))
+			  ("foo"
+			   ((0 0 11 1 1 2024 1 -1 nil)
+			    (2024 1 1 1)))
 			  )
 			(harness-filter-items (castellan--activity-items)
 					      '(:headline :scheduled))

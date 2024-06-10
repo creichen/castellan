@@ -460,22 +460,21 @@ parts of the result."
 	(last-was-todo nil)
 	(results nil))
     (dolist (item items)
-      (-let* (((&plist :headline-props headline-props
-		       :buffer buffer
+      (-let* (((&plist :buffer buffer
 		       :file file
 		       :position position
 		       :properties properties) item)
-	      ((&plist :level level
-		       :priority priority
-		       :todo-type todo-type
-		       :todo-keyword todo-status
-		       :scheduled (_ (&plist
-				      :repeater-type schedule-repeater-type
-				      :repeater-unit schedule-repeater-unit
-				      :repeater-value schedule-repeater-value))
-		       :raw-value unsplit-headline) headline-props)
+	      (level (org-element-property :level item))
+	      (priority (org-element-property :priority item))
+	      (todo-type (org-element-property :todo-type item))
+	      (todo-status (org-element-property :todo-keyword item))
+	      (scheduled-info (org-element-property :scheduled item))
+	      ((&plist
+		:repeater-type schedule-repeater-type
+		:repeater-unit schedule-repeater-unit
+		:repeater-value schedule-repeater-value) scheduled-info)
+	      (unsplit-headline (org-element-property :raw-value item))
 	      ((&alist "SCHEDULED" scheduled) properties)
-	      ;(headline (castellan--headline-get unsplit-headline))
 	      ((&plist :time scheduled-timespec
 		       :duration scheduled-duration
 		       :activity new-ctx-activity

@@ -64,6 +64,7 @@ CLOSED: [2024-04-22 Mon 13:32]
  **** TODO some TODO
 #+END_SRC
 
+*** TODO when sorting by date/time, preserve hierarchy
 *** TODO todo-style "WAIT" and todo-style "DELEGATED" with names attached
 *** TODO 'magic' scheduled TODO items for activities that link to/update the activity agenda (e.g., "work on FUSE")
 *** TODO re-add comments, optionally (advice around org-note?)
